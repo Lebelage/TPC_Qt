@@ -19,6 +19,19 @@ namespace tpc_qt::services {
         tpc_->connection_state_changed_.subscribe([this](tpc::system::client::ConnectionState state) {
             on_connection_state_changed(state);
         });
+
+        tpc_->initialization_data_received_.subscribe([this](tpc::system::models::DiscoveryResult result) {
+            on_client_initialization_data_received(result);
+        });
+    }
+
+    TpcService::~TpcService() {
+        dispose();
+    }
+
+    auto TpcService::dispose() -> void {
+        connection_state_changed_.dispose();
+        disconnect_async();
     }
 #pragma endregion
 
@@ -28,16 +41,13 @@ namespace tpc_qt::services {
         return connection_status_;
     }
 
-    // bool TpcService::connected() const noexcept {
-    //     std::scoped_lock lock{mutex_};
-    //     return state_ == State::Connected;
-    // }
-    //
-    // std::string TpcService::endpoint() const {
-    //     std::scoped_lock lock{mutex_};
-    //     return endpoint_;
-    // }
+    auto TpcService::get_frame_request() -> std::optional<std::unordered_map<std::string, double> > {
+        auto result = tpc_->get_frame_request();
+        if (!result)
+            return std::nullopt;
 
+        return result.value();
+    }
 #pragma endregion
 
 #pragma region Public methods
@@ -47,14 +57,15 @@ namespace tpc_qt::services {
     }
 
     bool TpcService::connect_async(std::string endpoint) {
-
         tpc_->start_async();
         return true;
     }
 
     void TpcService::disconnect_async() {
-        tpc_->stop_async();
+        if (tpc_)
+            tpc_->stop_async();
     }
+
 #pragma endregion
 
 #pragma region Private methods
@@ -63,6 +74,12 @@ namespace tpc_qt::services {
 #pragma region Handlers
     auto TpcService::on_connection_state_changed(tpc::system::client::ConnectionState state) -> void {
         connection_state_changed_.invoke(state);
+    }
+
+    auto TpcService::on_client_initialization_data_received(
+        tpc::system::models::DiscoveryResult discovery_result) -> void {
+        initialization_data_ = discovery_result;
+        initialization_data_received_.invoke(discovery_result);
     }
 
 #pragma endergion

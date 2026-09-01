@@ -8,6 +8,7 @@ project(TPC_Qt
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 REQUIRED COMPONENTS
         Core
@@ -27,7 +28,6 @@ qt_policy(SET QTP0001 NEW)
 
 file(GLOB_RECURSE CPP_SOURCES
         CONFIGURE_DEPENDS
-
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
@@ -35,14 +35,11 @@ file(GLOB_RECURSE CPP_SOURCES
 
 # ============================================================
 # QML sources
-# ВАЖНО: пути делаем относительными, иначе Qt resource system
-# ругается на absolute path.
 # ============================================================
 
 file(GLOB_RECURSE QML_FILES
         CONFIGURE_DEPENDS
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-
         "qml/*.qml"
 )
 
@@ -61,8 +58,6 @@ add_subdirectory(
 
 qt_add_executable(TPC_Qt
         ${CPP_SOURCES}
-        src/services/tpc_service/tpc_service.hpp
-        src/services/tpc_service/tpc_service.cpp
 )
 
 # ============================================================
@@ -72,6 +67,9 @@ qt_add_executable(TPC_Qt
 qt_add_qml_module(TPC_Qt
         URI TPC
         VERSION 1.0
+        # Обязательно передаем C++ файлы сюда для корректной генерации moc/qml-регистраций
+        SOURCES
+        ${CPP_SOURCES}
 
         QML_FILES
         ${QML_FILES}
@@ -97,7 +95,6 @@ target_link_libraries(TPC_Qt
         Qt6::Qml
         Qt6::Quick
         Qt6::QuickControls2
-
         tpc_system
 )
 

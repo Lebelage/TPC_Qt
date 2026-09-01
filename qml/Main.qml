@@ -6,36 +6,34 @@ import "controls"
 
 ApplicationWindow {
     id: root
-
     width: 1000
     height: 700
     visible: true
-    title: "TPC"
+    title: "TPC Controller"
 
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        Workspace {
+        StackLayout {
+            id: mainViewStack
             Layout.fillWidth: true
             Layout.fillHeight: true
+
+            currentIndex: mainViewModel.current_tab_index
+
+            Workspace {
+                dataContext: mainViewModel.workspace
+            }
+            
+            Settings {
+                dataContext: mainViewModel.settings
+            }
         }
 
-        BottomHelperBar {
+        BottomBar {
             Layout.fillWidth: true
-
-            //connected: mainViewModel.connected
-            endpoint: mainViewModel.endpoint
-            connected: mainViewModel.connected
-
-            onConnectRequested: function (endpoint) {
-                mainViewModel.endpoint = endpoint
-                mainViewModel.connectToServer()
-            }
-
-            onDisconnectRequested: {
-                mainViewModel.disconnectFromServer()
-            }
+            dataContext: mainViewModel.bottomBar
         }
     }
 }

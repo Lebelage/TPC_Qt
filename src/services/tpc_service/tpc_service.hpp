@@ -27,6 +27,8 @@ namespace tpc_qt::services {
 
         TpcService &operator=(TpcService &&) = delete;
 
+        ~TpcService();
+
     private:
         TpcService();
 
@@ -34,11 +36,10 @@ namespace tpc_qt::services {
         [[nodiscard]]
         ConnectionStatus get_connection_status() const noexcept;
 
+        [[nodiscard]] auto get_frame_request() -> std::optional<std::unordered_map<std::string, double>>;
+
         // [[nodiscard]]
-        // bool connected() const noexcept;
-        //
-        // [[nodiscard]]
-        // std::string endpoint() const;
+        // ConnectionStatus get_sensors_name() const noexcept;
 
         void set_connection_parameters(std::string endpoint);
 
@@ -46,20 +47,30 @@ namespace tpc_qt::services {
 
         void disconnect_async();
 
+    public:
+        auto dispose() -> void;
+
     private:
         auto on_connection_state_changed(tpc::system::client::ConnectionState) -> void;
 
+        auto on_client_initialization_data_received(tpc::system::models::DiscoveryResult) -> void;
+
     public:
         tpc::utilities::event_handler<tpc::system::client::ConnectionState> connection_state_changed_;
+        tpc::utilities::event_handler<tpc::system::models::DiscoveryResult> initialization_data_received_;
 
     private:
         mutable std::mutex mutex_;
 
         tpc_qt::models::ConnectionParameters connection_parameters_{};
 
+        tpc::system::models::DiscoveryResult initialization_data_;
+
         ConnectionStatus connection_status_{ConnectionStatus::Disconnected};
 
         std::unique_ptr<tpc::system::TPC> tpc_;
+
+        std::unordered_map<std::string, double> last_received_frame;
 
         std::vector<std::uint8_t> handlers_ids_;
     };

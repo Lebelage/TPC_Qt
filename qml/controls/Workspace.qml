@@ -1,16 +1,27 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 
-Rectangle {
+Item {
     id: root
 
-    color: "#202124"
+    required property var dataContext
 
-    Label {
-        anchors.centerIn: parent
-        text: "Workspace"
-        color: "white"
-        font.pixelSize: 24
+    TableView {
+        anchors.fill: parent
+        
+        model: root.dataContext ? root.dataContext.sensors_model : null
+
+        delegate: Rectangle {
+            implicitWidth: 140
+            implicitHeight: 36
+            border.color: "#3e4246"
+            color: "#1e1f22"
+
+            Text {
+                anchors.centerIn: parent
+                text: display
+                color: "white"
+            }
+        }
     }
 }
