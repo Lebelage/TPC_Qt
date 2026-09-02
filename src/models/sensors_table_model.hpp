@@ -28,9 +28,21 @@ namespace tpc_qt::models {
             Value,
             ColumnCount
         };
+        enum CustomRoles {
+            NameRole = Qt::UserRole + 1,
+            ValueRole
+        };
 
         explicit SensorsTableModel(QObject *parent = nullptr)
             : QAbstractTableModel(parent) {
+        }
+
+        [[nodiscard]]
+        QHash<int, QByteArray> roleNames() const override {
+            QHash<int, QByteArray> roles = QAbstractTableModel::roleNames();
+            roles[NameRole] = "sensorName";
+            roles[ValueRole] = "sensorValue";
+            return roles;
         }
 
         static std::tuple<QChar, int, QChar> parse_key(const QString &key) {
@@ -70,14 +82,20 @@ namespace tpc_qt::models {
             if (!index.isValid() || index.row() < 0 || index.row() >= static_cast<int>(sensors_.size()))
                 return {};
 
+            const auto &sensor = sensors_[static_cast<std::size_t>(index.row())];
+
+            // Поддержка стандартных таблиц
             if (role == Qt::DisplayRole || role == Qt::EditRole) {
-                const auto &sensor = sensors_[static_cast<std::size_t>(index.row())];
                 switch (index.column()) {
                     case Name: return sensor.name;
                     case Value: return sensor.value;
                     default: break;
                 }
             }
+
+            // 3. Поддержка нашего ListView (отдаем данные по запросу QML)
+            if (role == NameRole) return sensor.name;
+            if (role == ValueRole) return sensor.value;
 
             return {};
         }

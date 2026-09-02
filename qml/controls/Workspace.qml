@@ -1,26 +1,117 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 Item {
     id: root
-
     required property var dataContext
 
-    TableView {
+    ColumnLayout {
         anchors.fill: parent
-        
-        model: root.dataContext ? root.dataContext.sensors_model : null
+        spacing: 0
 
-        delegate: Rectangle {
-            implicitWidth: 140
+        // 1. Шапка таблицы (Имена колонок)
+        Rectangle {
+            Layout.fillWidth: true
             implicitHeight: 36
+            color: "#18191a"
             border.color: "#3e4246"
-            color: "#1e1f22"
 
-            Text {
-                anchors.centerIn: parent
-                text: display
-                color: "white"
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 12
+
+                Text {
+                    Layout.preferredWidth: 220
+                    text: "Sensor Name"
+                    color: "#a9b7c6"
+                    font.bold: true
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Value"
+                    color: "#a9b7c6"
+                    font.bold: true
+                }
+
+                Text {
+                    Layout.preferredWidth: 100
+                    text: "Actions"
+                    color: "#a9b7c6"
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
+        }
+
+        // 2. Сама скроллируемая таблица (ListView)
+        ListView {
+            id: listView
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+
+            model: root.dataContext ? root.dataContext.sensors_model : null
+
+            delegate: Rectangle {
+                width: listView.width
+                height: 48
+                border.color: "#3e4246"
+                color: "#1e1f22"
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 12
+
+                    // Обращаемся к данным через наши CustomRoles
+                    Text {
+                        Layout.preferredWidth: 220
+                        text: sensorName // Берется из NameRole
+                        color: "white"
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: sensorValue !== undefined ? Number(sensorValue).toFixed(2) : "0.00" // Из ValueRole
+                        color: "#499c54"
+                    }
+
+                    Button {
+                        Layout.preferredWidth: 100
+                        text: "Action"
+                        implicitHeight: 32
+                        onClicked: {
+                            console.log("Действие для сенсора:", sensorName, "в строке", index)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Нижняя панель с кнопками
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 56
+            color: "#1e1f22"
+            border.color: "#3e4246"
+            border.width: 1
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+
+                Item { Layout.fillWidth: true } // Распорка
+
+                Button {
+                    text: "Refresh Data"
+                    onClicked: {
+                        root.dataContext.try_get_frame();
+                    }
+                }
             }
         }
     }

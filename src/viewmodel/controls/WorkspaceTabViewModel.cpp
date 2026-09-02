@@ -3,6 +3,8 @@
 namespace tpc_qt::view_models {
 #pragma region Constructor/Destructor
     WorkspaceViewModel::WorkspaceViewModel(QObject *parent) : QObject(parent) {
+        sensors_model_.add_sensor("rrrr", 654);
+
     }
 #pragma endregion
 
