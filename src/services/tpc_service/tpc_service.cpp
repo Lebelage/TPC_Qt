@@ -53,7 +53,7 @@ namespace tpc_qt::services {
 #pragma region Public methods
 
     void TpcService::set_connection_parameters(std::string endpoint) {
-        connection_parameters_.endpoint = endpoint;
+        //connection_parameters_.endpoint = endpoint;
     }
 
     bool TpcService::connect_async(std::string endpoint) {
@@ -64,6 +64,13 @@ namespace tpc_qt::services {
     void TpcService::disconnect_async() {
         if (tpc_)
             tpc_->stop_async();
+    }
+
+    void TpcService::calculate_field_3d() {
+        std::array<double, 3> a = {1,2,3};
+        std::array<double, 3> b = {4,5,6};
+
+        tpc_->calculate_field_3d(a, b);
     }
 
 #pragma endregion

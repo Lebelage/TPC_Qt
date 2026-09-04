@@ -158,8 +158,11 @@ namespace tpc_qt::models {
 
             sensors_[row].value = value;
 
-            const QModelIndex model_index = index(row, static_cast<int>(Value));
-            emit dataChanged(model_index, model_index, {Qt::DisplayRole, Qt::EditRole});
+            const QModelIndex top_left = index(row, 0);
+            const QModelIndex bottom_right = index(row, ColumnCount - 1);
+
+            emit dataChanged(top_left, bottom_right, {Qt::DisplayRole, Qt::EditRole, ValueRole});
+
             return true;
         }
 

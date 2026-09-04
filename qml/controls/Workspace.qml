@@ -10,7 +10,6 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // 1. Шапка таблицы (Имена колонок)
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 36
@@ -46,7 +45,6 @@ Item {
             }
         }
 
-        // 2. Сама скроллируемая таблица (ListView)
         ListView {
             id: listView
             Layout.fillWidth: true
@@ -66,33 +64,22 @@ Item {
                     anchors.margins: 8
                     spacing: 12
 
-                    // Обращаемся к данным через наши CustomRoles
                     Text {
                         Layout.preferredWidth: 220
-                        text: sensorName // Берется из NameRole
+                        text: sensorName
                         color: "white"
                         elide: Text.ElideRight
                     }
 
                     Text {
                         Layout.fillWidth: true
-                        text: sensorValue !== undefined ? Number(sensorValue).toFixed(2) : "0.00" // Из ValueRole
+                        text: sensorValue
                         color: "#499c54"
-                    }
-
-                    Button {
-                        Layout.preferredWidth: 100
-                        text: "Action"
-                        implicitHeight: 32
-                        onClicked: {
-                            console.log("Действие для сенсора:", sensorName, "в строке", index)
-                        }
                     }
                 }
             }
         }
 
-        // 3. Нижняя панель с кнопками
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: 56
@@ -104,12 +91,12 @@ Item {
                 anchors.fill: parent
                 anchors.margins: 10
 
-                Item { Layout.fillWidth: true } // Распорка
+                Item { Layout.fillWidth: true }
 
                 Button {
                     text: "Refresh Data"
                     onClicked: {
-                        root.dataContext.try_get_frame();
+                        root.dataContext.try_get_frame_command();
                     }
                 }
             }

@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import "controls"
+import "styles"
 
 ApplicationWindow {
     id: root

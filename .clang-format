@@ -1,0 +1,85 @@
+---
+# Modern C++ Production Style (C++20/23)
+# Based on Google Style with pragmatic adjustments for modern syntax.
+BasedOnStyle: Google
+Language: Cpp
+Standard: Latest
+
+# -----------------------------------------------------------------
+# Базовые лимиты и отступы
+# -----------------------------------------------------------------
+ColumnLimit: 120               # 80 символов слишком мало для C++20/23 с длинными пространствами имен и шаблонами.
+IndentWidth: 4                 # 4 пробела делают код визуально чище (если в команде строго 2 — измените).
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4       # public/private на уровне класса (без отступа).
+NamespaceIndentation: None     # Код внутри namespace не сдвигается вправо.
+
+# -----------------------------------------------------------------
+# Фигурные скобки и компактизация
+# -----------------------------------------------------------------
+BreakBeforeBraces: Attach
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty # Только пустые методы {} можно в одну строку
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+# -----------------------------------------------------------------
+# Выравнивание (Alignment) - Критично для C++20 Designated Initializers
+# -----------------------------------------------------------------
+# BlockIndent предотвращает уродливое выравнивание вложенных скобок далеко вправо.
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignOperands: Align
+AlignTrailingComments: true
+Cpp11BracedListStyle: true     # Убирает лишние пробелы внутри агрегатной инициализации {1, 2, 3}.
+
+# -----------------------------------------------------------------
+# Указатели, ссылки и пробелы
+# -----------------------------------------------------------------
+PointerAlignment: Left         # int* ptr, const T& ref
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+SpacesInSquareBrackets: false
+SpacesInAngles: Never
+SpacesInContainerLiterals: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+
+# -----------------------------------------------------------------
+# Управление Includes (Сортировка и группировка)
+# -----------------------------------------------------------------
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  # 1. Системные и C-заголовки
+  - Regex: '^<[a-z0-9_]+.h>'
+    Priority: 1
+  # 2. Стандартная библиотека C++
+  - Regex: '^<.*>'
+    Priority: 2
+  # 3. Сторонние библиотеки (Eigen, gtest и т.д.)
+  - Regex: '^["<](Eigen|gtest|gmock|catch2)/'
+    Priority: 3
+  # 4. Локальные файлы проекта
+  - Regex: '.*'
+    Priority: 4
+
+# -----------------------------------------------------------------
+# Прочее
+# -----------------------------------------------------------------
+FixNamespaceComments: true     # Автоматически добавляет // namespace name
+BinPackArguments: false        # Аргументы функции либо все на одной строке, либо каждый на новой (читаемее).
+BinPackParameters: false
+...

@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import "../styles"
+
 Rectangle {
     id: root
     implicitHeight: 56
@@ -23,14 +25,9 @@ Rectangle {
             Layout.fillWidth: true
         }
 
-        TextField {
-            text: root.dataContext.endpoint
-            onTextEdited: root.dataContext.endpoint = text
-            Layout.preferredWidth: 300
-        }
-
-        Button {
+        StyledButton {
             width: 100
+            cornerRadius: 8
             text: root.dataContext.isConnected ? "Disconnect" : "Connect"
             onClicked: {
                 if (root.dataContext.isConnected)
@@ -40,8 +37,9 @@ Rectangle {
             }
         }
 
-        Button {
+        StyledButton {
             width: 100
+            cornerRadius: 8
             text: root.dataContext.switch_tab_button_name
 
             onClicked: {

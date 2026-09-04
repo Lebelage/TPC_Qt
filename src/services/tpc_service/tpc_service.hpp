@@ -5,9 +5,6 @@
 
 #include <tpc.hpp>
 
-#include "models/connection_parameters.hpp"
-
-
 namespace tpc_qt::services {
     enum class ConnectionStatus {
         Connected,
@@ -36,7 +33,7 @@ namespace tpc_qt::services {
         [[nodiscard]]
         ConnectionStatus get_connection_status() const noexcept;
 
-        [[nodiscard]] auto get_frame_request() -> std::optional<std::unordered_map<std::string, double>>;
+        [[nodiscard]] auto get_frame_request() -> std::optional<std::unordered_map<std::string, double> >;
 
         // [[nodiscard]]
         // ConnectionStatus get_sensors_name() const noexcept;
@@ -46,6 +43,8 @@ namespace tpc_qt::services {
         bool connect_async(std::string endpoint);
 
         void disconnect_async();
+
+        void calculate_field_3d();
 
     public:
         auto dispose() -> void;
@@ -61,8 +60,6 @@ namespace tpc_qt::services {
 
     private:
         mutable std::mutex mutex_;
-
-        tpc_qt::models::ConnectionParameters connection_parameters_{};
 
         tpc::system::models::DiscoveryResult initialization_data_;
 

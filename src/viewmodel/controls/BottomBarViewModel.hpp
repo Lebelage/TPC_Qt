@@ -11,7 +11,6 @@ namespace tpc_qt::view_models {
         Q_OBJECT
 
         Q_PROPERTY(bool isConnected READ get_isConnected NOTIFY isConnectedChanged)
-        Q_PROPERTY(QString endpoint READ get_endpoint WRITE set_endpoint NOTIFY endpointChanged)
         Q_PROPERTY(QString switch_tab_button_name READ get_switch_tab_button_name NOTIFY switchTabButtonNameChanged)
 
     public:
@@ -37,8 +36,6 @@ namespace tpc_qt::view_models {
     signals:
         void isConnectedChanged();
 
-        void endpointChanged();
-
         void switchTabButtonNameChanged();
 
     private:
@@ -52,8 +49,6 @@ namespace tpc_qt::view_models {
         bool connection_state_{false};
 
         bool is_connected_{false};
-
-        QString endpoint_{"opc.tcp://127.0.0.1:1234"};
 
         QString switch_tab_button_name_{};
     };
