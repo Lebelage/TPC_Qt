@@ -8,11 +8,13 @@
 import tpc_qt.services.settings_holder;
 import tpc_qt.services.tpc_srvice;
 import tpc_qt.services.event_dispatcher;
+import tpc_qt.services.file_worker;
 
 void register_services() {
     tpc_qt::services::TpcService::instance();
     tpc_qt::services::EventDispatcher::instance();
     tpc_qt::services::SettingsHolderService::instance();
+    tpc_qt::services::file_worker::instance();
 }
 
 void unregister_services() {

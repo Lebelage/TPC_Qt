@@ -1,6 +1,6 @@
 module;
-#include <filesystem>
 #include <expected>
+#include <string>
 export module tpc_qt.services.file_worker;
 import tpc_qt.models.ui.application_settings_model;
 export namespace tpc_qt::services::file_worker {
@@ -35,5 +35,8 @@ export namespace tpc_qt::services::file_worker {
         std::expected<models::AppSettings, std::string> load_settings();
 
         bool is_settings_file_exists_or_empty();
+
+    private:
+        void initialize();
     };
 }
