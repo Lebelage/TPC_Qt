@@ -2,8 +2,11 @@
 #include <QObject>
 #include <QtQmlIntegration>
 
-#include "models/sensors_table_model.hpp"
-#include "services/tpc_service/tpc_service.hpp"
+#include "../../models/tables/sensors_table_model.hpp"
+
+namespace tpc::system::models {
+struct DiscoveryResult;
+}
 
 namespace tpc_qt::view_models {
     class WorkspaceViewModel : public QObject {

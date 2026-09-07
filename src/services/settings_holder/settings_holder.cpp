@@ -1,4 +1,4 @@
-#include "settings_holder.hpp"
+module tpc_qt.services.settings_holder;
 
 namespace tpc_qt::services {
 #pragma region Constructor/Destructor
@@ -20,6 +20,7 @@ namespace tpc_qt::services {
 
     void SettingsHolderService::apply_settings(models::AppSettings settings) {
         current_settings_ = settings;
+
     }
 
     const models::AppSettings &SettingsHolderService::get_current_settings() const {

@@ -60,8 +60,8 @@ file(GLOB_RECURSE QML_FILES
 # ============================================================
 
 add_subdirectory(
-        "C:/Users/excep/CLionProjects/TPC_API"
-        #/Users/sonora/dev/projects/TPC_API
+        #"C:/Users/excep/CLionProjects/TPC_API"
+        /Users/sonora/dev/projects/TPC_API
         #"${CMAKE_BINARY_DIR}/TPC_API"
         ${CMAKE_BINARY_DIR}/TPC_API
 )

@@ -1,5 +1,8 @@
 #include "WorkspaceTabViewModel.hpp"
 
+import tpc.system.models.system_data;
+import tpc_qt.services.tpc_srvice;
+
 namespace tpc_qt::view_models {
 #pragma region Constructor/Destructor
     WorkspaceViewModel::WorkspaceViewModel(QObject *parent) : QObject(parent) {

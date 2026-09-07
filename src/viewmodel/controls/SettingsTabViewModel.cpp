@@ -1,8 +1,9 @@
 #include "SettingsTabViewModel.hpp"
 
-#include "models/application_settings_model.cppm"
-#include "services/tpc_service/tpc_service.hpp"
-#include "services/settings_holder/settings_holder.hpp"
+import tpc_qt.services.tpc_srvice;
+import tpc_qt.services.settings_holder;
+
+import tpc_qt.models.ui.application_settings_model;
 
 namespace tpc_qt::view_models {
 #pragma region Constructor/Destructor
@@ -70,6 +71,11 @@ namespace tpc_qt::view_models {
 
 #pragma region Commands
     void SettingsViewModel::apply_settings_command() {
+
+        // models::AppSettings settings{};
+        // settings.connection = {.endpoint = get_endpoint().toStdString(), .polling_interval = get_pollingInterval()};
+        // settings.geometric = {.length = get_tpcLength(), .radius= get_tpcRadius()};
+        // settings.sensors = {.sensors = {}}
         tpc_qt::services::SettingsHolderService::instance().apply_settings(
             {{get_tpcLength(), get_tpcRadius()}, {get_endpoint().toStdString(), get_pollingInterval()}});
     }

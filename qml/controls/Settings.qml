@@ -198,14 +198,25 @@ Item {
                 }
             }
 
-            StyledButton {
-                text: "Apply"
-                cornerRadius: 8
-                Layout.alignment: Qt.AlignRight
+            RowLayout{
+                StyledButton {
+                    text: "Apply"
+                    cornerRadius: 8
+                    Layout.alignment: Qt.AlignRight
 
-                onClicked: {
-                    if (root.dataContext) {
-                        root.dataContext.apply_settings_command()
+                    onClicked: {
+                        if (root.dataContext) {
+                            root.dataContext.apply_settings_command()
+                        }
+                    }
+                }
+
+                StyledButton {
+                    text: "Load"
+                    cornerRadius: 8
+                    Layout.alignment: Qt.AlignRight
+
+                    onClicked: {
                     }
                 }
             }

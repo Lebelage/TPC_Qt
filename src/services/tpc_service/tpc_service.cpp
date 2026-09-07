@@ -1,5 +1,12 @@
-#include "services/tpc_service/tpc_service.hpp"
+module;
+#include <algorithm>
+#include <array>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <unordered_map>
 
+module tpc_qt.services.tpc_srvice;
 namespace tpc_qt::services {
 #pragma region Constructor/Destructor
     TpcService &TpcService::instance() {

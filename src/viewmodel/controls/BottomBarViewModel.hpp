@@ -2,11 +2,16 @@
 #include <QObject>
 #include <QString>
 #include <QtQmlIntegration>
+#include <mutex>
 
-#include "client/client.hpp"
-#include <models/ui/tabs_indexing_model.cppm>
+#include "models/ui/tabs_indexing_model.hpp"
+
+namespace tpc::system::client {
+enum class ConnectionState : int;
+}
 
 namespace tpc_qt::view_models {
+
     class BottomBarViewModel : public QObject {
         Q_OBJECT
 
@@ -14,7 +19,9 @@ namespace tpc_qt::view_models {
         Q_PROPERTY(QString switch_tab_button_name READ get_switch_tab_button_name NOTIFY switchTabButtonNameChanged)
 
     public:
-        explicit BottomBarViewModel(QObject *parent = nullptr, models::ui::TabsIndexingModel target_tab = models::ui::TabsIndexingModel::Settings);
+        explicit BottomBarViewModel(
+            QObject *parent,
+            models::ui::TabsIndexingModel target_tab);
 
     public:
 

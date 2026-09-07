@@ -1,12 +1,12 @@
-#pragma once
+module;
 #include <expected>
 #include <string>
 
-#include <models/application_settings_model.cppm>
+export module tpc_qt.services.settings_holder;
+import tpc_qt.models.ui.application_settings_model;
 using namespace tpc_qt::models;
 
-namespace tpc_qt::services {
-
+export namespace tpc_qt::services {
     struct AppSettings;
 
     class SettingsHolderService {
@@ -23,14 +23,13 @@ namespace tpc_qt::services {
 
         ~SettingsHolderService();
 
+    private:
+        SettingsHolderService();
+
     public:
         void apply_settings(models::AppSettings settngs);
 
-        const models::AppSettings& get_current_settings() const;
-
-
-    private:
-        SettingsHolderService();
+        const models::AppSettings &get_current_settings() const;
 
     private:
         models::AppSettings initialize_by_defaults();

@@ -1,4 +1,5 @@
-module;
+#pragma once
+
 #include <QAbstractTableModel>
 #include <QString>
 #include <QStringView>
@@ -11,8 +12,8 @@ module;
 #include <unordered_map>
 #include <utility>
 #include <vector>
-export module tpc_qt.models.ui.sensors_table_model;
-export namespace tpc_qt::models {
+
+namespace tpc_qt::models {
     struct SensorRow {
         QString name;
         double value{0.0};
@@ -27,6 +28,7 @@ export namespace tpc_qt::models {
             Value,
             ColumnCount
         };
+
         enum CustomRoles {
             NameRole = Qt::UserRole + 1,
             ValueRole

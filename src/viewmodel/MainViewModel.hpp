@@ -6,9 +6,7 @@
 #include "controls/BottomBarViewModel.hpp"
 #include "controls/SettingsTabViewModel.hpp"
 
-#include "models/ui/tabs_indexing_model.cppm"
-#include "services/event_dispatcher/event_dispatcher.hpp"
-
+#include "models/ui/tabs_indexing_model.hpp"
 namespace tpc_qt::view_models {
 
 class MainViewModel : public QObject {
@@ -21,19 +19,7 @@ class MainViewModel : public QObject {
     Q_PROPERTY(int current_tab_index READ current_tab_index NOTIFY current_tab_index_changed)
 
 public:
-    explicit MainViewModel(QObject *parent = nullptr)
-        : QObject(parent)
-        , workspace_(new WorkspaceViewModel(this))
-        , bottom_bar_(new BottomBarViewModel(this, models::ui::TabsIndexingModel::Workspace))
-        , settings_(new SettingsViewModel(this))
-    {
-
-        services::EventDispatcher::instance().tab_change_requested.subscribe(
-            [this](models::ui::TabsIndexingModel target_tab) {
-                on_tab_change_requested(target_tab);
-            }
-        );
-    }
+    explicit MainViewModel(QObject *parent = nullptr);
 
     WorkspaceViewModel* workspace() const noexcept { return workspace_; }
     BottomBarViewModel* bottom_bar() const noexcept { return bottom_bar_; }

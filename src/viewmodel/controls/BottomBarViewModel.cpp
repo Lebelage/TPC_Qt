@@ -2,9 +2,10 @@
 
 #include <mutex>
 
-#include "services/event_dispatcher/event_dispatcher.hpp"
-#include "services/tpc_service/tpc_service.hpp"
-#include "services/settings_holder/settings_holder.hpp"
+import tpc.system.client;
+import tpc_qt.services.tpc_srvice;
+import tpc_qt.services.settings_holder;
+import tpc_qt.services.event_dispatcher;
 
 namespace tpc_qt::view_models {
 #pragma region Constructor/Destructor

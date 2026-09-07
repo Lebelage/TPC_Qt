@@ -3,9 +3,11 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 
-#include "services/settings_holder/settings_holder.hpp"
-#include "services/tpc_service/tpc_service.hpp"
 #include "viewmodel/MainViewModel.hpp"
+
+import tpc_qt.services.settings_holder;
+import tpc_qt.services.tpc_srvice;
+import tpc_qt.services.event_dispatcher;
 
 void register_services() {
     tpc_qt::services::TpcService::instance();

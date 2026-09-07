@@ -1,11 +1,18 @@
-#pragma once
+module;
 #include <string>
 #include <mutex>
 #include <memory>
+#include <optional>
+#include <unordered_map>
+#include <vector>
+#include <cstdint>
+export module tpc_qt.services.tpc_srvice;
 
-#include <tpc.hpp>
-
-namespace tpc_qt::services {
+import event_handler;
+import tpc.system.client;
+import tpc.system.models.system_data;
+import tpc.system.tpc;
+export namespace tpc_qt::services {
     enum class ConnectionStatus {
         Connected,
         Inactive,

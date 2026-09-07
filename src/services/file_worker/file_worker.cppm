@@ -1,0 +1,39 @@
+module;
+#include <filesystem>
+#include <expected>
+export module tpc_qt.services.file_worker;
+import tpc_qt.models.ui.application_settings_model;
+export namespace tpc_qt::services::file_worker {
+    struct AppDirectories {
+        static constexpr std::string SETTINGS_DIR = "Settings/";
+    };
+
+    struct AppFiles {
+        static constexpr std::string SETTINGS_JSON_FILE = "Settings.json";
+    };
+
+    class FileWorker {
+    public:
+        static FileWorker &instance();
+
+        FileWorker(const FileWorker &) = delete;
+
+        FileWorker &operator=(const FileWorker &) = delete;
+
+        FileWorker(FileWorker &&) = delete;
+
+        FileWorker &operator=(FileWorker &&) = delete;
+
+        ~FileWorker();
+
+    private:
+        FileWorker();
+
+    public:
+        std::expected<void, std::string> write_settings(std::string settings_text);
+
+        std::expected<models::AppSettings, std::string> load_settings();
+
+        bool is_settings_file_exists_or_empty();
+    };
+}
