@@ -1,4 +1,4 @@
-#include "services/event_dispatcher/event_dispatcher.hpp"
+module tpc_qt.services.event_dispatcher;
 namespace tpc_qt::services {
 
 #pragma region Constructor/Destructor

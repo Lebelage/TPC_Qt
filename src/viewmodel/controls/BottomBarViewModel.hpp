@@ -4,7 +4,7 @@
 #include <QtQmlIntegration>
 
 #include "client/client.hpp"
-#include <models/ui/tabs_indexing_model.hpp>
+#include <models/ui/tabs_indexing_model.cppm>
 
 namespace tpc_qt::view_models {
     class BottomBarViewModel : public QObject {

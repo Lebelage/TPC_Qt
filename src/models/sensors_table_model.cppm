@@ -1,5 +1,4 @@
-#pragma once
-
+module;
 #include <QAbstractTableModel>
 #include <QString>
 #include <QStringView>
@@ -12,8 +11,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-namespace tpc_qt::models {
+export module tpc_qt.models.ui.sensors_table_model;
+export namespace tpc_qt::models {
     struct SensorRow {
         QString name;
         double value{0.0};

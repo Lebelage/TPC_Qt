@@ -2,7 +2,7 @@
 #include <expected>
 #include <string>
 
-#include <models/application_settings.h>
+#include <models/application_settings_model.cppm>
 using namespace tpc_qt::models;
 
 namespace tpc_qt::services {

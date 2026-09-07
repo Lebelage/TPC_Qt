@@ -1,6 +1,6 @@
 #include "SettingsTabViewModel.hpp"
 
-#include "models/application_settings.h"
+#include "models/application_settings_model.cppm"
 #include "services/tpc_service/tpc_service.hpp"
 #include "services/settings_holder/settings_holder.hpp"
 

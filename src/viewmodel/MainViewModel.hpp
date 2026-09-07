@@ -6,7 +6,7 @@
 #include "controls/BottomBarViewModel.hpp"
 #include "controls/SettingsTabViewModel.hpp"
 
-#include "models/ui/tabs_indexing_model.hpp"
+#include "models/ui/tabs_indexing_model.cppm"
 #include "services/event_dispatcher/event_dispatcher.hpp"
 
 namespace tpc_qt::view_models {

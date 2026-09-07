@@ -16,7 +16,6 @@ namespace tpc_qt::services {
 
 #pragma endregion
 
-
 #pragma region Public methods
 
     void SettingsHolderService::apply_settings(models::AppSettings settings) {
