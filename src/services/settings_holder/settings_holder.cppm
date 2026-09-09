@@ -29,6 +29,8 @@ export namespace tpc_qt::services {
     public:
         void apply_settings(models::AppSettings settngs);
 
+        std::expected<void, std::string> load_settings();
+
         const models::AppSettings &get_current_settings() const;
 
     private:

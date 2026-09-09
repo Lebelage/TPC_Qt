@@ -6,6 +6,7 @@ module;
 #include <unordered_map>
 #include <vector>
 #include <cstdint>
+#include <span>
 export module tpc_qt.services.tpc_srvice;
 
 import event_handler;
@@ -51,7 +52,7 @@ export namespace tpc_qt::services {
 
         void disconnect_async();
 
-        void calculate_field_3d();
+        void calculate_field_3d(std::span<double> sensors_values, std::span<double> sensors_positions);
 
     public:
         auto dispose() -> void;

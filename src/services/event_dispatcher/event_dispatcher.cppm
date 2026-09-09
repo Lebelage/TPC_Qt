@@ -26,5 +26,7 @@ export namespace tpc_qt::services {
 
     public:
         tpc::utilities::event_handler<models::ui::TabsIndexingModel> tab_change_requested;
+
+
     };
 }

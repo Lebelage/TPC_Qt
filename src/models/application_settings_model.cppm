@@ -5,15 +5,15 @@ module;
 #include "nlohmann/json.hpp"
 export module tpc_qt.models.ui.application_settings_model;
 export namespace tpc_qt::models {
-    struct Sensor {
-        std::string name{};
+    struct SensorInfo {
+        std::string group_name{};
         float x{0.f};
         float y{0.f};
         float z{0.f};
     };
 
-    struct SensorsSettings {
-        std::vector<Sensor> sensors{};
+    struct SensorsInfoCollection {
+        std::vector<SensorInfo> sensors{};
     };
 
     struct ConnectionParameters {
@@ -29,14 +29,14 @@ export namespace tpc_qt::models {
     struct AppSettings {
         TpcGeometricParams geometric{0, 0};
         ConnectionParameters connection{"", 0};
-        SensorsSettings sensors{};
+        SensorsInfoCollection sensors_info{};
     };
 
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
-        Sensor, name, x, y, z)
+        SensorInfo, group_name, x, y, z)
 
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
-        SensorsSettings, sensors)
+        SensorsInfoCollection, sensors)
 
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
         ConnectionParameters, endpoint, polling_interval)
@@ -45,5 +45,5 @@ export namespace tpc_qt::models {
         TpcGeometricParams, length, radius)
 
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(
-        AppSettings, geometric, connection, sensors)
+        AppSettings, geometric, connection, sensors_info)
 }

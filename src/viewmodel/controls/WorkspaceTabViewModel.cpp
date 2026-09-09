@@ -2,7 +2,7 @@
 
 import tpc.system.models.system_data;
 import tpc_qt.services.tpc_srvice;
-
+import tpc_qt.services.settings_holder;
 namespace tpc_qt::view_models {
 #pragma region Constructor/Destructor
     WorkspaceViewModel::WorkspaceViewModel(QObject *parent) : QObject(parent) {
@@ -33,6 +33,14 @@ namespace tpc_qt::view_models {
         for (auto frame: result.value()) {
             sensors_model_.set_value(QString::fromStdString(frame.first), frame.second);
         }
+    }
+
+    void WorkspaceViewModel::try_calculate_field_command() {
+
+        auto values_requested = tpc_qt::services::TpcService::instance().get_frame_request();
+        //auto sensors_requested = tpc_qt::services::SettingsHolderService::instance().get_current_settings().sensors;
+
+        //for ()
     }
 #pragma endregion
 

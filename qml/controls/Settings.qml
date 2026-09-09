@@ -217,6 +217,9 @@ Item {
                     Layout.alignment: Qt.AlignRight
 
                     onClicked: {
+                        if (root.dataContext) {
+                            root.dataContext.load_settings_command()
+                        }
                     }
                 }
             }

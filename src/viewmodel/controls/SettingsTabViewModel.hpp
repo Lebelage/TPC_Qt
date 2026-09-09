@@ -1,6 +1,10 @@
 #pragma once
 #include <QObject>
 
+namespace tpc::system::models {
+    struct DiscoveryResult;
+}
+
 namespace tpc_qt::view_models {
     class SettingsViewModel : public QObject {
         Q_OBJECT
@@ -33,6 +37,8 @@ namespace tpc_qt::view_models {
     public:
         Q_INVOKABLE void apply_settings_command();
 
+        Q_INVOKABLE void load_settings_command();
+
     signals:
         void tpcLengthChanged();
 
@@ -41,6 +47,12 @@ namespace tpc_qt::view_models {
         void endpointChanged();
 
         void pollingIntervalChanged();
+
+    private:
+        void load_settings();
+
+    private:
+        void on_initialization_data_received(tpc::system::models::DiscoveryResult);
 
     private:
         QString endpoint_{""};

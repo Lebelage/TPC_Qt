@@ -14,7 +14,7 @@ void register_services() {
     tpc_qt::services::TpcService::instance();
     tpc_qt::services::EventDispatcher::instance();
     tpc_qt::services::SettingsHolderService::instance();
-    tpc_qt::services::file_worker::instance();
+    tpc_qt::services::FileWorker::instance();
 }
 
 void unregister_services() {

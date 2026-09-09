@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+import "../styles"
+
 Item {
     id: root
     required property var dataContext
@@ -91,14 +93,35 @@ Item {
                 anchors.fill: parent
                 anchors.margins: 10
 
-                Item { Layout.fillWidth: true }
+                Item {
+                    Layout.fillWidth: true
+                }
 
-                Button {
-                    text: "Refresh Data"
+                StyledButton {
+                    text: "Visualize"
+                    cornerRadius: 8
                     onClicked: {
                         root.dataContext.try_get_frame_command();
                     }
                 }
+
+                StyledButton {
+                    text: "Field"
+                    cornerRadius: 8
+                    onClicked: {
+                        root.dataContext.try_get_frame_command();
+                    }
+                }
+
+                StyledButton {
+                    text: "Refresh Data"
+                    cornerRadius: 8
+                    onClicked: {
+                        root.dataContext.try_get_frame_command();
+                    }
+                }
+
+
             }
         }
     }

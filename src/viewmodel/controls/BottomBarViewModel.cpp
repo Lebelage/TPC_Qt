@@ -42,9 +42,6 @@ namespace tpc_qt::view_models {
     void BottomBarViewModel::connection_command() {
         std::scoped_lock (mutex_);
 
-        ///
-        services::TpcService::instance().calculate_field_3d();
-
         services::TpcService::instance().connect_async(
             services::SettingsHolderService::instance().get_current_settings().connection.endpoint);
     }

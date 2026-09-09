@@ -3,6 +3,7 @@ module;
 #include <array>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_map>
 
@@ -73,11 +74,8 @@ namespace tpc_qt::services {
             tpc_->stop_async();
     }
 
-    void TpcService::calculate_field_3d() {
-        std::array<double, 3> a = {1,2,3};
-        std::array<double, 3> b = {4,5,6};
-
-        tpc_->calculate_field_3d(a, b);
+    void TpcService::calculate_field_3d(std::span<double> sensors_values, std::span<double> sensors_positions) {
+        //tpc_->calculate_field_3d(a, b);
     }
 
 #pragma endregion

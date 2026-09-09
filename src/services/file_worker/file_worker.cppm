@@ -3,13 +3,13 @@ module;
 #include <string>
 export module tpc_qt.services.file_worker;
 import tpc_qt.models.ui.application_settings_model;
-export namespace tpc_qt::services::file_worker {
+export namespace tpc_qt::services {
     struct AppDirectories {
-        static constexpr std::string SETTINGS_DIR = "Settings/";
+        static const inline std::string SETTINGS_DIR = "Settings";
     };
 
     struct AppFiles {
-        static constexpr std::string SETTINGS_JSON_FILE = "Settings.json";
+        static const inline std::string SETTINGS_JSON_FILE = "settings.json";
     };
 
     class FileWorker {
@@ -32,7 +32,7 @@ export namespace tpc_qt::services::file_worker {
     public:
         std::expected<void, std::string> write_settings(std::string settings_text);
 
-        std::expected<models::AppSettings, std::string> load_settings();
+        std::expected<std::string, std::string> load_settings();
 
         bool is_settings_file_exists_or_empty();
 

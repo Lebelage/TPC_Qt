@@ -24,6 +24,7 @@ namespace tpc_qt::view_models {
 
     public:
         Q_INVOKABLE void try_get_frame_command();
+        Q_INVOKABLE void try_calculate_field_command();
 
     private:
         void initialize(tpc::system::models::DiscoveryResult);
