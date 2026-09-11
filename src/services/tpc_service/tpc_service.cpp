@@ -9,6 +9,7 @@ module;
 
 module tpc_qt.services.tpc_srvice;
 import tpc_qt.services.event_dispatcher;
+import tpc_qt.services.settings_holder;
 namespace tpc_qt::services {
 #pragma region Constructor/Destructor
     TpcService &TpcService::instance() {
@@ -96,8 +97,8 @@ namespace tpc_qt::services {
     auto TpcService::on_client_initialization_data_received(
         tpc::system::models::DiscoveryResult discovery_result) -> void {
 
+        services::SettingsHolderService::instance().set
         tpc_data_.set_discovery_result(discovery_result);
-
         //EventDispatcher::instance().initialization_data_received.invoke(discovery_result);
     }
 

@@ -36,12 +36,19 @@ export namespace tpc_qt::services {
         void set_geometry_parameters(TpcGeometryParams);
         void set_sensors_parameters(std::vector<SensorInfo>);
 
-        // const models::AppSettings &get_current_settings() const;
+        ConnectionParameters get_connection_parameters();
+        TpcGeometryParams get_geometry_parameters();
+        std::vector<SensorInfo> get_sensors_parameters();
+
+        // const models::AppSettings &get_current_gettings() const;
     
     private:
         models::AppSettings initialize_by_defaults();
 
+        std::vector<SensorInfo> validate_sensors_parameters(std::vector<SensorInfo> sensors_parameters);
     private:
         models::AppSettings current_settings_{};
+
+
     };
 }
