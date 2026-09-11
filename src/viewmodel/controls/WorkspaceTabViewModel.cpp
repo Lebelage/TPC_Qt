@@ -36,11 +36,22 @@ namespace tpc_qt::view_models {
     }
 
     void WorkspaceViewModel::try_calculate_field_command() {
+        auto values_requested = services::TpcService::instance().get_frame_request();
+        auto sensors_requested = services::SettingsHolderService::instance().get_current_settings().sensors_info;
 
-        auto values_requested = tpc_qt::services::TpcService::instance().get_frame_request();
-        //auto sensors_requested = tpc_qt::services::SettingsHolderService::instance().get_current_settings().sensors;
+        auto nodes = services::TpcService::instance().get_initialization_data().nodes;
 
-        //for ()
+        std::vector<double> prepared_values;
+        std::vector<double> prepared_positions;
+
+        prepared_values.reserve(nodes.size());
+        prepared_positions.reserve(nodes.size());
+
+        for(auto n : nodes) {
+            prepared_values.push_back(values_requested.value()[n.second]);
+
+            
+        }
     }
 #pragma endregion
 

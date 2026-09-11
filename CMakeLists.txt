@@ -72,6 +72,7 @@ add_subdirectory(
 
 qt_add_executable(TPC_Qt
         ${CPP_SOURCES}
+        src/models/tpc_data_model.cppm
 )
 
 target_sources(TPC_Qt

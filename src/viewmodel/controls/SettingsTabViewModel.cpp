@@ -75,23 +75,19 @@ namespace tpc_qt::view_models {
 
 #pragma region Commands
     void SettingsViewModel::apply_settings_command() {
-        // auto settings = tpc_qt::services::SettingsHolderService::instance().get_current_settings();
-        // set_endpoint(QString::fromStdString(settings.connection.endpoint));
-        // set_pollingInterval(settings.connection.polling_interval);
-        // set_tpcRadius(settings.geometric.radius);
-        // set_tpcLength(settings.geometric.length);
-        //
-        // services::SettingsHolderService::instance().apply_settings(settings);
+        auto &settings_service = tpc_qt::services::SettingsHolderService::instance();
+
+        settings_service.set_connection_parameters({
+            .endpoint = endpoint_.toStdString(), .polling_interval = polling_interval_
+        });
+
+        settings_service.set_geometry_parameters({.length = tpc_length_, .radius = tpc_radius_});
+
+        settings_service.apply_settings();
     }
 
     void SettingsViewModel::load_settings_command() {
         services::SettingsHolderService::instance().load_settings();
-
-        auto loaded = services::SettingsHolderService::instance().get_current_settings();
-        set_endpoint(QString::fromStdString(loaded.connection.endpoint));
-        set_pollingInterval(loaded.connection.polling_interval);
-        set_tpcRadius(loaded.geometric.radius);
-        set_tpcLength(loaded.geometric.length);
     }
 
 #pragma endregion
@@ -117,15 +113,8 @@ namespace tpc_qt::view_models {
 
         std::vector<models::SensorInfo> new_sensors;
 
-        std::vector<std::string> group_names;
+        std::vector<std::string> group_names = tpc;
         group_names.reserve(result.nodes.size());
-
-        auto unique_set = result.nodes
-                          | std::views::values
-                          | std::views::transform([](const std::string &s) { return s.substr(0, 2); })
-                          | std::ranges::to<std::unordered_set<std::string> >();
-
-        group_names = unique_set | std::ranges::to<std::vector<std::string> >();
 
         if (!settings.sensors_info.sensors.empty()) {
             for (auto gn: group_names) {

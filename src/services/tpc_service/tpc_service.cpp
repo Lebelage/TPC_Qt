@@ -8,6 +8,7 @@ module;
 #include <unordered_map>
 
 module tpc_qt.services.tpc_srvice;
+import tpc_qt.services.event_dispatcher;
 namespace tpc_qt::services {
 #pragma region Constructor/Destructor
     TpcService &TpcService::instance() {
@@ -56,6 +57,10 @@ namespace tpc_qt::services {
 
         return result.value();
     }
+
+    auto TpcService::get_initialization_data() noexcept -> std::optional<tpc::system::models::DiscoveryResult&> {
+        return tpc_data_.get_discovery_result();
+    }
 #pragma endregion
 
 #pragma region Public methods
@@ -75,7 +80,7 @@ namespace tpc_qt::services {
     }
 
     void TpcService::calculate_field_3d(std::span<double> sensors_values, std::span<double> sensors_positions) {
-        //tpc_->calculate_field_3d(a, b);
+        tpc_->calculate_field_3d(a, b);
     }
 
 #pragma endregion
@@ -90,8 +95,10 @@ namespace tpc_qt::services {
 
     auto TpcService::on_client_initialization_data_received(
         tpc::system::models::DiscoveryResult discovery_result) -> void {
-        initialization_data_ = discovery_result;
-        initialization_data_received_.invoke(discovery_result);
+
+        tpc_data_.set_discovery_result(discovery_result);
+
+        //EventDispatcher::instance().initialization_data_received.invoke(discovery_result);
     }
 
 #pragma endergion
