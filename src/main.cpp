@@ -5,10 +5,10 @@
 
 #include "viewmodel/MainViewModel.hpp"
 
-import tpc_qt.services.settings_holder;
-import tpc_qt.services.tpc_srvice;
-import tpc_qt.services.event_dispatcher;
-import tpc_qt.services.file_worker;
+#include "services/settings_holder/settings_holder.hpp"
+#include "services/tpc_service/tpc_service.hpp"
+#include "services/event_dispatcher/event_dispatcher.hpp"
+#include "services/file_worker/file_worker.hpp"
 
 void register_services() {
     tpc_qt::services::TpcService::instance();

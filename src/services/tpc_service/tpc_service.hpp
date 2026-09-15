@@ -1,4 +1,5 @@
-module;
+#pragma once
+
 #include <string>
 #include <mutex>
 #include <memory>
@@ -7,14 +8,13 @@ module;
 #include <vector>
 #include <cstdint>
 #include <span>
-export module tpc_qt.services.tpc_srvice;
 
-import event_handler;
-import tpc.system.client;
-import tpc.system.models.system_data;
-import tpc.system.tpc;
-import tpc_qt.models.tpc_data_model;
-export namespace tpc_qt::services {
+#include "utilities/event_handler.hpp"
+#include "tpc_system/client/client.hpp"
+#include "tpc_system/models/data.hpp"
+#include "tpc_system/tpc.hpp"
+#include "models/tpc_data_model.hpp"
+namespace tpc_qt::services {
     enum class ConnectionStatus {
         Connected,
         Inactive,
@@ -44,7 +44,7 @@ export namespace tpc_qt::services {
 
         [[nodiscard]] auto get_frame_request() -> std::optional<std::unordered_map<std::string, double> >;
 
-        [[nodiscard]] auto get_initialization_data() noexcept -> std::optional<tpc::system::models::DiscoveryResult&>;
+        [[nodiscard]] auto get_initialization_data() const -> std::optional<tpc::system::models::DiscoveryResult>;
 
 
         // [[nodiscard]]
@@ -68,6 +68,7 @@ export namespace tpc_qt::services {
 
     public:
         tpc::utilities::event_handler<tpc::system::client::ConnectionState> connection_state_changed_;
+        tpc::utilities::event_handler<tpc::system::models::DiscoveryResult> initialization_data_received_;
 
     private:
         mutable std::mutex mutex_;

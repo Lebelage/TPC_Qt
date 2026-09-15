@@ -1,12 +1,15 @@
 #include "SettingsTabViewModel.hpp"
 
+#include <algorithm>
+#include <ranges>
 #include <unordered_set>
+#include <utility>
 
-import tpc_qt.services.tpc_srvice;
-import tpc_qt.services.settings_holder;
+#include "services/tpc_service/tpc_service.hpp"
+#include "services/settings_holder/settings_holder.hpp"
 
-import tpc_qt.models.ui.application_settings_model;
-import tpc.system.models.system_data;
+#include "models/application_settings_model.hpp"
+#include "tpc_system/models/data.hpp"
 
 namespace tpc_qt::view_models {
 #pragma region Constructor/Destructor
@@ -101,8 +104,8 @@ namespace tpc_qt::view_models {
 
         set_endpoint(QString::fromStdString(settings.connection.endpoint));
         set_pollingInterval(settings.connection.polling_interval);
-        set_tpcRadius(settings.geometric.radius);
-        set_tpcLength(settings.geometric.length);
+        set_tpcRadius(settings.geometry.radius);
+        set_tpcLength(settings.geometry.length);
     }
 
 #pragma endregion
@@ -113,20 +116,28 @@ namespace tpc_qt::view_models {
 
         std::vector<models::SensorInfo> new_sensors;
 
-        std::vector<std::string> group_names = tpc;
+        std::vector<std::string> group_names;
         group_names.reserve(result.nodes.size());
 
-        if (!settings.sensors_info.sensors.empty()) {
+        for (const auto& [node_id, name] : result.nodes) {
+            group_names.push_back(name.substr(0, 2));
+        }
+
+        std::ranges::sort(group_names);
+        const auto unique_end = std::ranges::unique(group_names).begin();
+        group_names.erase(unique_end, group_names.end());
+
+        if (!settings.sensors_info.empty()) {
             for (auto gn: group_names) {
                 auto it = std::find_if(
-                    settings.sensors_info.sensors.begin(),
-                    settings.sensors_info.sensors.end(),
+                    settings.sensors_info.begin(),
+                    settings.sensors_info.end(),
                     [&gn](const models::SensorInfo &sensor) {
                         return sensor.group_name == gn;
                     }
                 );
 
-                if (it != settings.sensors_info.sensors.end()) {
+                if (it != settings.sensors_info.end()) {
                     new_sensors.push_back(*it);
                 } else {
                     new_sensors.emplace_back(gn);
@@ -134,11 +145,13 @@ namespace tpc_qt::view_models {
             }
         } else {
             for (auto gn: group_names) {
-                settings.sensors_info.sensors.emplace_back(gn);
+                new_sensors.emplace_back(gn);
             }
         }
 
-        services::SettingsHolderService::instance().apply_settings(settings);
+        auto& settings_service = services::SettingsHolderService::instance();
+        settings_service.set_sensors_parameters(std::move(new_sensors));
+        settings_service.apply_settings();
     }
 #pragma endregion
 }

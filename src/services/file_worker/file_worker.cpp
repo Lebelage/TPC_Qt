@@ -1,99 +1,98 @@
-module;
-#include <filesystem>
-#include <fstream>
+#include "services/file_worker/file_worker.hpp"
+
 #include <expected>
-module tpc_qt.services.file_worker;
+#include <filesystem>
+#include <format>
+#include <fstream>
+#include <sstream>
 namespace tpc_qt::services {
-    namespace fs = std::filesystem;
+namespace fs = std::filesystem;
 
 #pragma region Constructor/Destructor
-    FileWorker &FileWorker::instance() {
-        static FileWorker inst;
-        return inst;
-    }
+FileWorker& FileWorker::instance() {
+    static FileWorker inst;
+    return inst;
+}
 
-    FileWorker::FileWorker() {
-        initialize();
-    }
+FileWorker::FileWorker() {
+    initialize();
+}
 
-
-    FileWorker::~FileWorker() {
-    }
-#pragma endregion Constructor/Destructor
+FileWorker::~FileWorker() {}
+#pragma endregion Constructor / Destructor
 
 #pragma region Public methods
-    std::expected<void, std::string> FileWorker::write_settings(std::string settings_text) {
-        if (!fs::exists(AppDirectories::SETTINGS_DIR))
-            return std::unexpected(std::format("{}: directory does not exist", AppDirectories::SETTINGS_DIR));
+std::expected<void, std::string> FileWorker::write_settings(std::string settings_text) {
+    if (!fs::exists(AppDirectories::SETTINGS_DIR))
+        return std::unexpected(std::format("{}: directory does not exist", AppDirectories::SETTINGS_DIR));
 
-        fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
-        if (!fs::exists(filePath))
-            return std::unexpected(std::format("{}: file does not exist", AppFiles::SETTINGS_JSON_FILE));
+    fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
+    if (!fs::exists(filePath))
+        return std::unexpected(std::format("{}: file does not exist", AppFiles::SETTINGS_JSON_FILE));
 
-        std::ofstream file(filePath, std::ios::out);
+    std::ofstream file(filePath, std::ios::out);
 
-        if (file.is_open()) {
-            file << settings_text;
-            file.close();
-        }
-        else {
-            return std::unexpected(std::format("{}: failed to open file", AppFiles::SETTINGS_JSON_FILE));
-        }
-
-        return{};
+    if (file.is_open()) {
+        file << settings_text;
+        file.close();
+    } else {
+        return std::unexpected(std::format("{}: failed to open file", AppFiles::SETTINGS_JSON_FILE));
     }
 
-    std::expected<std::string, std::string> FileWorker::load_settings() {
+    return {};
+}
 
-        if (!fs::exists(AppDirectories::SETTINGS_DIR))
-            return std::unexpected(std::format("{}: directory does not exist", AppDirectories::SETTINGS_DIR));
+std::expected<std::string, std::string> FileWorker::load_settings() {
+    if (!fs::exists(AppDirectories::SETTINGS_DIR))
+        return std::unexpected(std::format("{}: directory does not exist", AppDirectories::SETTINGS_DIR));
 
-        fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
-        if (!fs::exists(filePath))
-            return std::unexpected(std::format("{}: file does not exist", AppFiles::SETTINGS_JSON_FILE));
+    fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
+    if (!fs::exists(filePath))
+        return std::unexpected(std::format("{}: file does not exist", AppFiles::SETTINGS_JSON_FILE));
 
-        std::ifstream file(filePath);
+    std::ifstream file(filePath);
 
-        std::stringstream buffer;
+    std::stringstream buffer;
 
-        if (file.is_open()) {
-            buffer << file.rdbuf();
-            file.close();
-        }
-        else {
-            return std::unexpected(std::format("{}: failed to open file", AppFiles::SETTINGS_JSON_FILE));
-        }
-
-        return buffer.str();
+    if (file.is_open()) {
+        buffer << file.rdbuf();
+        file.close();
+    } else {
+        return std::unexpected(std::format("{}: failed to open file", AppFiles::SETTINGS_JSON_FILE));
     }
 
-    bool FileWorker::is_settings_file_exists_or_empty() {
-    }
+    return buffer.str();
+}
+
+bool FileWorker::is_settings_file_exists_or_empty() {
+    const fs::path file_path = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
+    return !fs::exists(file_path) || fs::is_empty(file_path);
+}
 
 #pragma endregion Public methods
 
 #pragma region Private methods
-    void FileWorker::initialize() {
-        if (!fs::exists(AppDirectories::SETTINGS_DIR)) {
-            if (fs::create_directories(AppDirectories::SETTINGS_DIR)) {
-                ///
-            } else {
-                ///
-            }
+void FileWorker::initialize() {
+    if (!fs::exists(AppDirectories::SETTINGS_DIR)) {
+        if (fs::create_directories(AppDirectories::SETTINGS_DIR)) {
+            ///
         } else {
+            ///
         }
-
-        fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
-
-        if (!fs::exists(filePath)) {
-            std::ofstream outFile(filePath);
-            if (outFile.is_open()) {
-                outFile.close();
-            } else {
-                return;
-            }
-        } else {
-        }
+    } else {
     }
-#pragma endregion Private methods
+
+    fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
+
+    if (!fs::exists(filePath)) {
+        std::ofstream outFile(filePath);
+        if (outFile.is_open()) {
+            outFile.close();
+        } else {
+            return;
+        }
+    } else {
+    }
 }
+#pragma endregion Private methods
+}  // namespace tpc_qt::services

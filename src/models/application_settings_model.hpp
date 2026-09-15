@@ -1,10 +1,10 @@
-module;
+#pragma once
+
 #include <string>
 #include <vector>
 
 #include "nlohmann/json.hpp"
-export module tpc_qt.models.ui.application_settings_model;
-export namespace tpc_qt::models {
+namespace tpc_qt::models {
     struct SensorInfo {
         std::string group_name{};
         float x{0.f};

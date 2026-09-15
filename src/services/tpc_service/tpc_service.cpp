@@ -1,15 +1,12 @@
-module;
-#include <algorithm>
-#include <array>
 #include <mutex>
 #include <optional>
 #include <span>
 #include <string>
 #include <unordered_map>
 
-module tpc_qt.services.tpc_srvice;
-import tpc_qt.services.event_dispatcher;
-import tpc_qt.services.settings_holder;
+#include "services/tpc_service/tpc_service.hpp"
+#include "services/event_dispatcher/event_dispatcher.hpp"
+#include "services/settings_holder/settings_holder.hpp"
 namespace tpc_qt::services {
 #pragma region Constructor/Destructor
     TpcService &TpcService::instance() {
@@ -59,7 +56,7 @@ namespace tpc_qt::services {
         return result.value();
     }
 
-    auto TpcService::get_initialization_data() noexcept -> std::optional<tpc::system::models::DiscoveryResult&> {
+    auto TpcService::get_initialization_data() const -> std::optional<tpc::system::models::DiscoveryResult> {
         return tpc_data_.get_discovery_result();
     }
 #pragma endregion
@@ -81,7 +78,8 @@ namespace tpc_qt::services {
     }
 
     void TpcService::calculate_field_3d(std::span<double> sensors_values, std::span<double> sensors_positions) {
-        tpc_->calculate_field_3d(a, b);
+        if (tpc_)
+            tpc_->calculate_field_3d(sensors_values, sensors_positions);
     }
 
 #pragma endregion
@@ -97,10 +95,10 @@ namespace tpc_qt::services {
     auto TpcService::on_client_initialization_data_received(
         tpc::system::models::DiscoveryResult discovery_result) -> void {
 
-        services::SettingsHolderService::instance().set
+
         tpc_data_.set_discovery_result(discovery_result);
-        //EventDispatcher::instance().initialization_data_received.invoke(discovery_result);
+        initialization_data_received_.invoke(discovery_result);
     }
 
-#pragma endergion
+#pragma endregion
 }

@@ -36,12 +36,6 @@ file(GLOB_RECURSE CPP_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
 )
 
-file(GLOB_RECURSE CXX_MODULES
-        CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.ixx"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cppm"
-)
-
 # ============================================================
 # QML sources
 # ВАЖНО: пути делаем относительными, иначе Qt resource system
@@ -72,21 +66,11 @@ add_subdirectory(
 
 qt_add_executable(TPC_Qt
         ${CPP_SOURCES}
-        src/models/tpc_data_model.cppm
-)
 
-target_sources(TPC_Qt
-        PRIVATE
-        FILE_SET cxx_modules
-        TYPE CXX_MODULES
-        BASE_DIRS
-        "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        FILES
-        ${CXX_MODULES}
 )
 
 set_target_properties(TPC_Qt PROPERTIES
-        CXX_SCAN_FOR_MODULES ON
+        CXX_SCAN_FOR_MODULES OFF
 )
 
 # ============================================================

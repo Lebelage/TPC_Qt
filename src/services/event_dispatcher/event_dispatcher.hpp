@@ -1,11 +1,11 @@
-module;
+#pragma once
+
 #include "models/ui/tabs_indexing_model.hpp"
 
-export module tpc_qt.services.event_dispatcher;
-import event_handler;
-import tpc_qt.models.ui.application_settings_model;
-import tpc.system.models.system_data;
-export namespace tpc_qt::services {
+#include "utilities/event_handler.hpp"
+#include "models/application_settings_model.hpp"
+#include "tpc_system/models/data.hpp"
+namespace tpc_qt::services {
     class EventDispatcher {
     public:
         static EventDispatcher &instance();

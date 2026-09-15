@@ -1,8 +1,8 @@
 #include "WorkspaceTabViewModel.hpp"
 
-import tpc.system.models.system_data;
-import tpc_qt.services.tpc_srvice;
-import tpc_qt.services.settings_holder;
+#include "tpc_system/models/data.hpp"
+#include "services/tpc_service/tpc_service.hpp"
+#include "services/settings_holder/settings_holder.hpp"
 namespace tpc_qt::view_models {
 #pragma region Constructor/Destructor
     WorkspaceViewModel::WorkspaceViewModel(QObject *parent) : QObject(parent) {
@@ -38,8 +38,12 @@ namespace tpc_qt::view_models {
     void WorkspaceViewModel::try_calculate_field_command() {
         auto values_requested = services::TpcService::instance().get_frame_request();
         auto sensors_requested = services::SettingsHolderService::instance().get_current_settings().sensors_info;
+        auto initialization_data = services::TpcService::instance().get_initialization_data();
 
-        auto nodes = services::TpcService::instance().get_initialization_data().nodes;
+        if (!values_requested || !initialization_data)
+            return;
+
+        const auto& nodes = initialization_data->nodes;
 
         std::vector<double> prepared_values;
         std::vector<double> prepared_positions;

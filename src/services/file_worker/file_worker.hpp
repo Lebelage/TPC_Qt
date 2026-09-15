@@ -1,9 +1,9 @@
-module;
+#pragma once
+
 #include <expected>
 #include <string>
-export module tpc_qt.services.file_worker;
-import tpc_qt.models.ui.application_settings_model;
-export namespace tpc_qt::services {
+#include "models/application_settings_model.hpp"
+namespace tpc_qt::services {
     struct AppDirectories {
         static const inline std::string SETTINGS_DIR = "Settings";
     };
