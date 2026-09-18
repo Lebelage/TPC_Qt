@@ -23,10 +23,13 @@ FileWorker::~FileWorker() {}
 
 #pragma region Public methods
 std::expected<void, std::string> FileWorker::write_settings(std::string settings_text) {
-    if (!fs::exists(AppDirectories::SETTINGS_DIR))
+    auto current_dir = fs::current_path();
+    auto settings_dir = current_dir / AppDirectories::SETTINGS_DIR;
+
+    if (!fs::exists(settings_dir))
         return std::unexpected(std::format("{}: directory does not exist", AppDirectories::SETTINGS_DIR));
 
-    fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
+    fs::path filePath = settings_dir / AppFiles::SETTINGS_JSON_FILE;
     if (!fs::exists(filePath))
         return std::unexpected(std::format("{}: file does not exist", AppFiles::SETTINGS_JSON_FILE));
 
@@ -43,10 +46,14 @@ std::expected<void, std::string> FileWorker::write_settings(std::string settings
 }
 
 std::expected<std::string, std::string> FileWorker::load_settings() {
-    if (!fs::exists(AppDirectories::SETTINGS_DIR))
+    auto current_dir = fs::current_path();
+    auto settings_dir = current_dir / AppDirectories::SETTINGS_DIR;
+
+    if (!fs::exists(settings_dir))
         return std::unexpected(std::format("{}: directory does not exist", AppDirectories::SETTINGS_DIR));
 
-    fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
+    fs::path filePath = settings_dir / AppFiles::SETTINGS_JSON_FILE;
+
     if (!fs::exists(filePath))
         return std::unexpected(std::format("{}: file does not exist", AppFiles::SETTINGS_JSON_FILE));
 
@@ -61,6 +68,9 @@ std::expected<std::string, std::string> FileWorker::load_settings() {
         return std::unexpected(std::format("{}: failed to open file", AppFiles::SETTINGS_JSON_FILE));
     }
 
+    if (buffer.str().empty())
+        return std::unexpected(std::format("{}: file is empty", AppFiles::SETTINGS_JSON_FILE));
+
     return buffer.str();
 }
 
@@ -73,8 +83,11 @@ bool FileWorker::is_settings_file_exists_or_empty() {
 
 #pragma region Private methods
 void FileWorker::initialize() {
-    if (!fs::exists(AppDirectories::SETTINGS_DIR)) {
-        if (fs::create_directories(AppDirectories::SETTINGS_DIR)) {
+    auto current_dir = fs::current_path();
+
+    auto settings_dir = current_dir / AppDirectories::SETTINGS_DIR;
+    if (!fs::exists(settings_dir)) {
+        if (fs::create_directories(settings_dir)) {
             ///
         } else {
             ///
@@ -82,7 +95,7 @@ void FileWorker::initialize() {
     } else {
     }
 
-    fs::path filePath = fs::path(AppDirectories::SETTINGS_DIR) / AppFiles::SETTINGS_JSON_FILE;
+    fs::path filePath = settings_dir / AppFiles::SETTINGS_JSON_FILE;
 
     if (!fs::exists(filePath)) {
         std::ofstream outFile(filePath);

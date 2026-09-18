@@ -1,8 +1,13 @@
 #pragma once
+
 #include <QObject>
 
 namespace tpc::system::models {
     struct DiscoveryResult;
+}
+
+namespace tpc_qt::models{
+    struct AppSettings;
 }
 
 namespace tpc_qt::view_models {
@@ -49,11 +54,8 @@ namespace tpc_qt::view_models {
         void pollingIntervalChanged();
 
     private:
-        void load_settings();
 
-    private:
-        void on_initialization_data_received(tpc::system::models::DiscoveryResult);
-
+    void on_settings_changed(const models::AppSettings&);
     private:
         QString endpoint_{""};
         int polling_interval_{0};

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "models/tpc_data_model.hpp"
 #include "models/ui/tabs_indexing_model.hpp"
 
 #include "utilities/event_handler.hpp"
@@ -28,8 +29,8 @@ namespace tpc_qt::services {
 
     public:
         tpc::utilities::event_handler<models::ui::TabsIndexingModel> tab_change_requested;
-        tpc::utilities::event_handler<tpc::system::models::DiscoveryResult> initialization_data_received;
-        tpc::utilities::event_handler<models::AppSettings> settings_loaded;
+        tpc::utilities::event_handler<std::vector<tpc_qt::models::SensorName>> initialization_data_received;
+        tpc::utilities::event_handler<const models::AppSettings&> settings_changed;
         tpc::utilities::event_handler<models::AppSettings> settings_applied;
     };
 }

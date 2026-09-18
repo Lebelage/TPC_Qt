@@ -1,0 +1,84 @@
+{
+    "connection": {
+        "endpoint": "opc.tcp://127.0.0.1:1234",
+        "polling_interval": 1000
+    },
+    "geometry": {
+        "length": 228.0,
+        "radius": 1337.0
+    },
+    "sensors_info": [
+        {
+            "previewable_name": "E1",
+            "x": 6.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "E2",
+            "x": 4.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "E3",
+            "x": 6.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "E4",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "E5",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "E6",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "W1",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "W2",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "W3",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "W4",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "W5",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        {
+            "previewable_name": "W6",
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        }
+    ]
+}
