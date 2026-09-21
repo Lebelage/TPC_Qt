@@ -4,8 +4,8 @@
         "polling_interval": 1000
     },
     "geometry": {
-        "length": 228.0,
-        "radius": 1337.0
+        "length": 4,
+        "radius": 7
     },
     "sensors_info": [
         {

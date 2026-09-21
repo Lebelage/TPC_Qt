@@ -178,6 +178,17 @@ public:
         return sensors_;
     }
 
+    std::array<size_t, 3> grid() const noexcept {
+        return grid_;
+    }
+    double length() const noexcept {
+        return length_;
+    }
+
+    double radius() const noexcept {
+        return radius_;
+    }
+
     void set_sensors(std::vector<Sensor> sensors) {
         sensors_ = std::move(sensors);
         apply_received_frame();
@@ -186,6 +197,18 @@ public:
     void set_received_frame(ReceivedFrame frame) {
         received_frame_ = std::move(frame);
         apply_received_frame();
+    }
+
+    void set_grid(std::array<size_t, 3> grid) {
+        grid_ = std::move(grid);
+    }
+
+    void set_length(double length) {
+        length_ = length;
+    }
+
+    void set_radius(double radius) {
+        radius_ = radius;
     }
 
     void clear() noexcept {
@@ -219,6 +242,11 @@ private:
     DiscoveryResult discovery_result_{};
     ReceivedFrame received_frame_{};
     std::vector<Sensor> sensors_{};
+    std::array<size_t,3> grid_{};
+
+    double length_{};
+    double radius_{};
+
 };
 
 }  // namespace tpc_qt::models

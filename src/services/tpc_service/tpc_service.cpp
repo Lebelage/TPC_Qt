@@ -93,7 +93,7 @@ void TpcService::calculate_field_3d() {
     if (!tpc_)
         return;
 
-    tpc_->calculate_field_3d(create_measurments());
+    tpc_->calculate_field_async(create_measurments(), tpc_data_.grid(), tpc_data_.radius(), tpc_data_.length());
 }
 
 #pragma endregion
@@ -106,12 +106,12 @@ std::vector<tpc::analytics::models::Measurement> TpcService::create_measurments(
 
     for (const auto& sensor : sensors) {
         tpc::analytics::models::PointComponents point{
-            .components = {sensor.position | std::ranges::to<std::vector<double>>()},
-            .coordinate_type = tpc::analytics::models::CoordinateType::Cylindric
+            .components = {sensor.position | std::ranges::to<std::array<double, 3>>()},
+            .coordinate_type = tpc::analytics::models::CoordinateType::Cartesian
         };
 
         tpc::analytics::models::FieldComponents field{
-            .components = {sensor.values | std::ranges::to<std::vector<double>>()},
+            .components = {sensor.values | std::ranges::to<std::array<double, 3>>()},
             .coordinate_type = tpc::analytics::models::CoordinateType::Cylindric
         };
 
@@ -148,6 +148,9 @@ auto TpcService::on_settings_changed(const models::AppSettings& settings) -> voi
     }
 
     tpc_data_.set_sensors(sensors);
+    tpc_data_.set_length(settings.geometry.length);
+    tpc_data_.set_radius(settings.geometry.radius);
+
 }
 
 #pragma endregion

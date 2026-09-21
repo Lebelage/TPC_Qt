@@ -109,7 +109,7 @@ Item {
                     text: "Field"
                     cornerRadius: 8
                     onClicked: {
-                        root.dataContext.try_get_frame_command();
+                        root.dataContext.try_calculate_field_command();
                     }
                 }
 

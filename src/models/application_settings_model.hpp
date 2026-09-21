@@ -33,6 +33,7 @@ struct AppSettings {
     TpcGeometryParams geometry{0, 0};
     ConnectionParameters connection{"", 0};
     std::vector<SensorInfo> sensors_info{};
+    std::array<size_t, 3> grid{};
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SensorInfo, previewable_name, x, y, z)
@@ -41,5 +42,5 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ConnectionParameters, endpoint, 
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TpcGeometryParams, length, radius)
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings, geometry, connection, sensors_info)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings, geometry, connection, sensors_info, grid)
 }  // namespace tpc_qt::models
