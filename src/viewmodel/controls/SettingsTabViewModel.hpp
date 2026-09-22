@@ -56,7 +56,7 @@ namespace tpc_qt::view_models {
 
         Q_INVOKABLE void load_settings_command();
 
-    signals:
+    Q_SIGNALS:
         void tpcLengthChanged();
 
         void tpcRadiusChanged();

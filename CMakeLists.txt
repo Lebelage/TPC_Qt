@@ -16,6 +16,7 @@ find_package(Qt6 REQUIRED COMPONENTS
         Qml
         Quick
         QuickControls2
+        Widgets
 )
 
 find_package(nlohmann_json)
@@ -55,7 +56,8 @@ file(GLOB_RECURSE QML_FILES
 
 add_subdirectory(
         #"C:/Users/excep/CLionProjects/TPC_API"
-        /Users/sonora/dev/projects/TPC_API
+        #/Users/sonora/dev/projects/TPC_API
+        /home/sonora/CLionProjects/TPC_API
         #"${CMAKE_BINARY_DIR}/TPC_API"
         ${CMAKE_BINARY_DIR}/TPC_API
 )
@@ -66,6 +68,8 @@ add_subdirectory(
 
 qt_add_executable(TPC_Qt
         ${CPP_SOURCES}
+        src/services/file_dialog/file_dialog_service.hpp
+        src/services/file_dialog/file_dialog_service.cpp
 
 )
 
@@ -97,6 +101,11 @@ target_include_directories(TPC_Qt
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
+# Keep Qt's convenience keywords from colliding with third-party APIs (oneTBB
+# declares a member function named `emit`). Use Q_SIGNALS/Q_SLOTS/Q_EMIT in
+# project sources instead.
+target_compile_definitions(TPC_Qt PRIVATE QT_NO_KEYWORDS)
+
 # ============================================================
 # Libraries
 # ============================================================
@@ -108,6 +117,7 @@ target_link_libraries(TPC_Qt
         Qt6::Qml
         Qt6::Quick
         Qt6::QuickControls2
+        Qt6::Widgets
 
         tpc_system
 

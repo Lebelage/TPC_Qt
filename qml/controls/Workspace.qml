@@ -97,19 +97,35 @@ Item {
                     Layout.fillWidth: true
                 }
 
+                // StyledButton {
+                //     text: "Visualize"
+                //     cornerRadius: 8
+                //     onClicked: {
+                //         root.dataContext.try_get_frame_command();
+                //     }
+                // }
+
                 StyledButton {
-                    text: "Visualize"
+                    text: "Save as ..."
                     cornerRadius: 8
                     onClicked: {
-                        root.dataContext.try_get_frame_command();
+                        root.dataContext.save_filed_vtk_as();
                     }
                 }
 
                 StyledButton {
-                    text: "Field"
+                    text: "Save"
                     cornerRadius: 8
                     onClicked: {
-                        root.dataContext.try_calculate_field_command();
+                        root.dataContext.save_filed_vtk_as();
+                    }
+                }
+
+                StyledButton {
+                    text: "Calculate field"
+                    cornerRadius: 8
+                    onClicked: {
+                        root.dataContext.calculate_field_command();
                     }
                 }
 
@@ -117,7 +133,7 @@ Item {
                     text: "Refresh Data"
                     cornerRadius: 8
                     onClicked: {
-                        root.dataContext.try_get_frame_command();
+                        root.dataContext.get_frame_command();
                     }
                 }
 

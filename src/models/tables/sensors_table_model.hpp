@@ -162,7 +162,7 @@ namespace tpc_qt::models {
             const QModelIndex top_left = index(row, 0);
             const QModelIndex bottom_right = index(row, ColumnCount - 1);
 
-            emit dataChanged(top_left, bottom_right, {Qt::DisplayRole, Qt::EditRole, ValueRole});
+            Q_EMIT dataChanged(top_left, bottom_right, {Qt::DisplayRole, Qt::EditRole, ValueRole});
 
             return true;
         }

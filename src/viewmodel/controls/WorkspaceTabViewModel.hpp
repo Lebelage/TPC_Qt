@@ -23,8 +23,10 @@ namespace tpc_qt::view_models {
         tpc_qt::models::SensorsTableModel &model() noexcept { return sensors_model_; }
 
     public:
-        Q_INVOKABLE void try_get_frame_command();
-        Q_INVOKABLE void try_calculate_field_command();
+        Q_INVOKABLE void get_frame_command();
+        Q_INVOKABLE void calculate_field_command();
+        Q_INVOKABLE void save_filed_vtk_as();
+        Q_INVOKABLE void save_filed_vtk();
 
     private:
         void initialize(tpc::system::models::DiscoveryResult);

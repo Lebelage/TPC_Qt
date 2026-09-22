@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -23,7 +23,7 @@ void unregister_services() {
 
 int main(int argc, char *argv[]) {
     QQuickStyle::setStyle("Basic");
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
     [[maybe_unused]] auto &service = tpc_qt::services::TpcService::instance();
 

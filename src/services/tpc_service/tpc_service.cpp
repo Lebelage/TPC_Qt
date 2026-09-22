@@ -68,16 +68,9 @@ auto TpcService::get_frame_request() -> std::optional<std::unordered_map<std::st
     return result.value();
 }
 
-auto TpcService::get_initialization_data() const -> std::optional<tpc::system::models::DiscoveryResult> {
-    // return tpc_data_.get_discovery_result();
-}
 #pragma endregion
 
 #pragma region Public methods
-
-void TpcService::set_connection_parameters(std::string endpoint) {
-    // connection_parameters_.endpoint = endpoint;
-}
 
 bool TpcService::connect_async(std::string endpoint) {
     tpc_->start_async();
@@ -94,6 +87,15 @@ void TpcService::calculate_field_3d() {
         return;
 
     tpc_->calculate_field_async(create_measurments(), tpc_data_.grid(), tpc_data_.radius(), tpc_data_.length());
+}
+void TpcService::export_field_to_vtk(std::string_view file_path) {
+    if (!tpc_)
+        return;
+
+    auto result = tpc_->export_to_vtk(file_path);
+
+    if (!result)
+        return;
 }
 
 #pragma endregion

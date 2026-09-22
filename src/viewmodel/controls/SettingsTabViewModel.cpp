@@ -31,7 +31,7 @@ void SettingsViewModel::set_tpcLength(double tpcLength) {
         return;
     }
     tpc_length_ = tpcLength;
-    emit tpcLengthChanged();
+    Q_EMIT tpcLengthChanged();
 }
 
 double SettingsViewModel::get_tpcRadius() const {
@@ -43,7 +43,7 @@ void SettingsViewModel::set_tpcRadius(double tpcRadius) {
         return;
     }
     tpc_radius_ = tpcRadius;
-    emit tpcRadiusChanged();
+    Q_EMIT tpcRadiusChanged();
 }
 
 QString SettingsViewModel::get_endpoint() const {
@@ -55,7 +55,7 @@ void SettingsViewModel::set_endpoint(const QString& endpoint) {
         return;
     }
     endpoint_ = endpoint;
-    emit endpointChanged();
+    Q_EMIT endpointChanged();
 }
 
 int SettingsViewModel::get_pollingInterval() const {
@@ -67,7 +67,7 @@ void SettingsViewModel::set_pollingInterval(int pollingInterval) {
         return;
     }
     polling_interval_ = pollingInterval;
-    emit pollingIntervalChanged();
+    Q_EMIT pollingIntervalChanged();
 }
 
 int SettingsViewModel::get_gridNx() const {
@@ -79,7 +79,7 @@ void SettingsViewModel::set_gridNx(int gridNx) {
         return;
     }
     grid_nx_ = gridNx;
-    emit gridNxChanged();
+    Q_EMIT gridNxChanged();
 }
 
 int SettingsViewModel::get_gridNy() const {
@@ -91,7 +91,7 @@ void SettingsViewModel::set_gridNy(int gridNy) {
         return;
     }
     grid_ny_ = gridNy;
-    emit gridNyChanged();
+    Q_EMIT gridNyChanged();
 }
 
 int SettingsViewModel::get_gridNz() const {
@@ -103,7 +103,7 @@ void SettingsViewModel::set_gridNz(int gridNz) {
         return;
     }
     grid_nz_ = gridNz;
-    emit gridNzChanged();
+    Q_EMIT gridNzChanged();
 }
 
 #pragma endregion

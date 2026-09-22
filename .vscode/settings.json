@@ -1,7 +1,0 @@
-{
-    "clangd.path": "clangd",
-    "clangd.arguments": [
-        "--compile-commands-dir=/Users/sonora/CLionProjects/TPC_Qt/build"
-    ],
-     "lldb-dap.executable-path": "/opt/homebrew/opt/lldb/bin/lldb-dap"
-}

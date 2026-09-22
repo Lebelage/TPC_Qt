@@ -29,7 +29,7 @@ public:
         return static_cast<int>(current_tab_);
     }
 
-signals:
+Q_SIGNALS:
     void current_tab_index_changed();
 
 private:
@@ -37,7 +37,7 @@ private:
         if (current_tab_ == target_tab) return;
 
         current_tab_ = target_tab;
-        emit current_tab_index_changed();
+        Q_EMIT current_tab_index_changed();
     }
 
 private:

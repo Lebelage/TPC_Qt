@@ -40,7 +40,7 @@ namespace tpc_qt::view_models {
 
         Q_INVOKABLE void switch_tab_command();
 
-    signals:
+    Q_SIGNALS:
         void isConnectedChanged();
 
         void switchTabButtonNameChanged();

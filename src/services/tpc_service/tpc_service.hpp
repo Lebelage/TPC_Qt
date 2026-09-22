@@ -50,26 +50,19 @@ public:
 
     [[nodiscard]] auto get_frame_request() -> std::optional<std::unordered_map<std::string, double>>;
 
-    [[nodiscard]] auto get_initialization_data() const -> std::optional<tpc::system::models::DiscoveryResult>;
-
-    // [[nodiscard]]
-    // ConnectionStatus get_sensors_name() const noexcept;
-
-    void set_connection_parameters(std::string endpoint);
-
     bool connect_async(std::string endpoint);
 
     void disconnect_async();
 
     void calculate_field_3d();
 
+    void export_field_to_vtk(std::string_view file_path);
+
 public:
     auto dispose() -> void;
 
 private:
     std::vector<tpc::analytics::models::Measurement> create_measurments();
-
-    
 
 private:
     auto on_connection_state_changed(tpc::system::client::ConnectionState) -> void;

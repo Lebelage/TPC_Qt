@@ -59,7 +59,7 @@ void BottomBarViewModel::switch_tab_command() {
 
     services::EventDispatcher::instance().tab_change_requested.invoke(current_tab_);
 
-    emit switchTabButtonNameChanged();
+    Q_EMIT switchTabButtonNameChanged();
 }
 
 #pragma endregion
@@ -79,7 +79,7 @@ auto BottomBarViewModel::on_connection_state_changed(tpc::system::client::Connec
             is_connected_ = true;
             break;
     }
-    emit isConnectedChanged();
+    Q_EMIT isConnectedChanged();
 }
 #pragma endregion
 }  // namespace tpc_qt::view_models
