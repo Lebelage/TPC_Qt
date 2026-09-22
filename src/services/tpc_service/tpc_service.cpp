@@ -150,6 +150,7 @@ auto TpcService::on_settings_changed(const models::AppSettings& settings) -> voi
     tpc_data_.set_sensors(sensors);
     tpc_data_.set_length(settings.geometry.length);
     tpc_data_.set_radius(settings.geometry.radius);
+    tpc_data_.set_grid(settings.grid);
 
 }
 

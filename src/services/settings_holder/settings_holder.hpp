@@ -36,6 +36,7 @@ public:
 
     void set_connection_parameters(ConnectionParameters);
     void set_geometry_parameters(TpcGeometryParams);
+    void set_grid_parameters(std::array<size_t, 3>);
     void set_sensors_parameters(std::vector<SensorInfo>);
 
     [[nodiscard]] const models::AppSettings& get_current_settings() const noexcept;

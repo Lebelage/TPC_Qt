@@ -74,6 +74,16 @@ void SettingsHolderService::set_geometry_parameters(TpcGeometryParams geometry_p
     current_settings_.geometry.radius = geometry_parameters.radius <= 0 ? 5 : geometry_parameters.radius;
 }
 
+void SettingsHolderService::set_grid_parameters(std::array<size_t, 3> grid) {
+    constexpr size_t default_grid_size = 32;
+    for (auto& dimension : grid) {
+        if (dimension == 0) {
+            dimension = default_grid_size;
+        }
+    }
+    current_settings_.grid = grid;
+}
+
 void SettingsHolderService::set_sensors_parameters(std::vector<SensorInfo> sensors_info) {
     validate_sensors_parameters(sensors_info);
 }
@@ -88,7 +98,9 @@ const models::AppSettings& SettingsHolderService::get_current_settings() const n
 models::AppSettings SettingsHolderService::initialize_by_defaults() {
     return models::AppSettings{
         {                       228, 1337},
-        {"opc.tcp://127.0.0.1:1234", 1000}
+        {"opc.tcp://127.0.0.1:1234", 1000},
+        {},
+        {32, 32, 32}
     };
 }
 
@@ -100,6 +112,8 @@ void SettingsHolderService::validate_and_confirm_settings(models::AppSettings se
 
     current_settings_.geometry.length = settings.geometry.length <= 0 ? 10 : settings.geometry.length;
     current_settings_.geometry.radius = settings.geometry.radius <= 0 ? 5 : settings.geometry.radius;
+
+    set_grid_parameters(settings.grid);
 
     validate_sensors_parameters(settings.sensors_info, true);
 

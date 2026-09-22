@@ -18,6 +18,9 @@ namespace tpc_qt::view_models {
         Q_PROPERTY(double tpcRadius READ get_tpcRadius WRITE set_tpcRadius NOTIFY tpcRadiusChanged)
         Q_PROPERTY(QString endpoint READ get_endpoint WRITE set_endpoint NOTIFY endpointChanged)
         Q_PROPERTY(int pollingInterval READ get_pollingInterval WRITE set_pollingInterval NOTIFY pollingIntervalChanged)
+        Q_PROPERTY(int gridNx READ get_gridNx WRITE set_gridNx NOTIFY gridNxChanged)
+        Q_PROPERTY(int gridNy READ get_gridNy WRITE set_gridNy NOTIFY gridNyChanged)
+        Q_PROPERTY(int gridNz READ get_gridNz WRITE set_gridNz NOTIFY gridNzChanged)
 
     public:
         explicit SettingsViewModel(QObject *parent = nullptr);
@@ -39,6 +42,15 @@ namespace tpc_qt::view_models {
 
         void set_pollingInterval(int pollingInterval);
 
+        int get_gridNx() const;
+        void set_gridNx(int gridNx);
+
+        int get_gridNy() const;
+        void set_gridNy(int gridNy);
+
+        int get_gridNz() const;
+        void set_gridNz(int gridNz);
+
     public:
         Q_INVOKABLE void apply_settings_command();
 
@@ -53,6 +65,10 @@ namespace tpc_qt::view_models {
 
         void pollingIntervalChanged();
 
+        void gridNxChanged();
+        void gridNyChanged();
+        void gridNzChanged();
+
     private:
 
     void on_settings_changed(const models::AppSettings&);
@@ -61,5 +77,8 @@ namespace tpc_qt::view_models {
         int polling_interval_{0};
         double tpc_length_{0};
         double tpc_radius_{0};
+        int grid_nx_{1};
+        int grid_ny_{1};
+        int grid_nz_{1};
     };
 }
