@@ -1,72 +1,108 @@
 #include "WorkspaceTabViewModel.hpp"
 
-#include "services/settings_holder/settings_holder.hpp"
-#include "services/tpc_service/tpc_service.hpp"
-#include "tpc_system/models/data.hpp"
+#include <utility>
+#include <vector>
+
 #include "services/file_dialog/file_dialog_service.hpp"
+#include "services/event_dispatcher/event_dispatcher.hpp"
+#include "services/tpc_service/tpc_service.hpp"
+
 namespace tpc_qt::view_models {
-#pragma region Constructor/Destructor
-WorkspaceViewModel::WorkspaceViewModel(QObject* parent) : QObject(parent) {
-    tpc_qt::services::TpcService::instance().initialization_data_received_.subscribe(
-        [this](tpc::system::models::DiscoveryResult discovery_result) {
-            on_data_initialization_data_received(discovery_result);
+WorkspaceViewModel::WorkspaceViewModel(
+    services::EventDispatcher& events,
+    services::TpcService& tpc,
+    QObject* parent
+) : QObject(parent), tpc_(tpc) {
+    settings_subscription_.subscribe(
+        events.settings_changed,
+        [this](const models::AppSettings& settings) {
+            QMetaObject::invokeMethod(this, [this, settings] {
+                onSettingsChanged(settings);
+            });
+        }
+    );
+
+    frame_subscription_.subscribe(
+        events.frame_received,
+        [this](const std::unordered_map<std::string, double> frame) {
+            QMetaObject::invokeMethod(this, [this, frame = std::move(frame)] {
+                onFrameReceived(std::move(frame));
+            });
+        }
+    );
+
+    field_was_calculated_.subscribe(
+        events.field_was_calculated_,
+        [this](bool is_calculated) {
+            QMetaObject::invokeMethod(this, [this, is_calculated = std::move(is_calculated)] {
+                onFieldWasCalculated(is_calculated);
+            });
         }
     );
 }
-#pragma endregion
 
-#pragma region Properties
-
-#pragma region[Properties] : sensors_model
-QAbstractItemModel* WorkspaceViewModel::get_sensors_model() noexcept {
+QAbstractItemModel* WorkspaceViewModel::sensorsModel() noexcept {
     return &sensors_model_;
 }
+QString WorkspaceViewModel::fieldCalculationInfoStatus() const noexcept {
+    return field_calculation_info_status_;
+}
 
-#pragma endregion
+bool WorkspaceViewModel::fieldCalculated() const noexcept {
+    return field_calculated_;
+}
 
-#pragma endregion
-
-#pragma region Commands
-void WorkspaceViewModel::get_frame_command() {
-    auto result = tpc_qt::services::TpcService::instance().get_frame_request();
-
-    if (!result)
+void WorkspaceViewModel::setFieldCalculationInfoStatus(bool status) noexcept {
+    if (field_calculated_ == status) {
         return;
-
-    for (auto frame : result.value()) {
-        sensors_model_.set_value(QString::fromStdString(frame.first), frame.second);
     }
+
+    field_calculated_ = status;
+    field_calculation_info_status_ = status ? "Field is calculated" : "Field is not calculated";
+    Q_EMIT fieldCalculationInfoStatusChanged();
+    Q_EMIT fieldCalculatedChanged();
 }
 
-void WorkspaceViewModel::calculate_field_command() {
-    tpc_qt::services::TpcService::instance().calculate_field_3d();
+void WorkspaceViewModel::calculateField() {
+    setFieldCalculationInfoStatus(false);
+    tpc_.calculateField();
 }
 
-void WorkspaceViewModel::save_filed_vtk_as() {
-    auto result = services::FileDialogService::save_file(nullptr, "Field", "VTK files (*.vtk)");
-
-    if (!result)
+void WorkspaceViewModel::saveFieldAsVtk() {
+    if (!field_calculated_) {
         return;
-
-    services::TpcService::instance().export_field_to_vtk(result.value().c_str());
-}
-
-void WorkspaceViewModel::save_filed_vtk() {}
-#pragma endregion
-
-#pragma region Methods
-
-void WorkspaceViewModel::initialize(tpc::system::models::DiscoveryResult discovery_result) {
-    for (auto frame : discovery_result.nodes) {
-        sensors_model_.add_sensor(QString::fromStdString(frame.second), 0.);
     }
-}
-#pragma endregion
 
-#pragma region Handlers
+    const auto path = services::FileDialogService::saveFile(nullptr, "Field", "VTK files (*.vtk)");
 
-void WorkspaceViewModel::on_data_initialization_data_received(tpc::system::models::DiscoveryResult discovery_result) {
-    initialize(discovery_result);
+    if (!path) {
+        return;
+    }
+
+    (void)tpc_.exportFieldToVtk(path->string());
 }
-#pragma endregion
+
+void WorkspaceViewModel::onSettingsChanged(models::AppSettings settings) {
+    setFieldCalculationInfoStatus(false);
+
+    std::vector<models::Sensor> sensors;
+    sensors.reserve(settings.sensors_info.size());
+
+    for (const auto& info : settings.sensors_info) {
+        sensors.push_back({
+            .name = info.name,
+            .position = {info.x, info.y, info.z}
+        });
+    }
+
+    sensors_model_.setSensors(std::move(sensors));
+}
+
+void WorkspaceViewModel::onFrameReceived(models::TpcDataModel::ReceivedFrame frame) {
+    sensors_model_.applyFrame(frame);
+}
+void WorkspaceViewModel::onFieldWasCalculated(bool is_calculated) {
+    setFieldCalculationInfoStatus(is_calculated);
+}
+
 }  // namespace tpc_qt::view_models

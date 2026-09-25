@@ -1,42 +1,34 @@
 #pragma once
 
 #include <expected>
+#include <filesystem>
+#include <mutex>
+#include <optional>
 #include <string>
-#include "models/application_settings_model.hpp"
+
 namespace tpc_qt::services {
-    struct AppDirectories {
-        static const inline std::string SETTINGS_DIR = "Settings";
-    };
 
-    struct AppFiles {
-        static const inline std::string SETTINGS_JSON_FILE = "settings.json";
-    };
+/** Persists the settings JSON at an explicitly configured application path. */
+class FileWorker final {
+public:
+    explicit FileWorker(
+        std::filesystem::path settings_path,
+        std::optional<std::filesystem::path> legacy_settings_path = std::nullopt
+    );
 
-    class FileWorker {
-    public:
-        static FileWorker &instance();
+    FileWorker(const FileWorker&) = delete;
+    FileWorker& operator=(const FileWorker&) = delete;
+    FileWorker(FileWorker&&) = delete;
+    FileWorker& operator=(FileWorker&&) = delete;
 
-        FileWorker(const FileWorker &) = delete;
+    [[nodiscard]] std::expected<void, std::string> writeSettings(const std::string& settings_text);
+    [[nodiscard]] std::expected<std::string, std::string> loadSettings() const;
 
-        FileWorker &operator=(const FileWorker &) = delete;
+private:
+    void initialize(const std::optional<std::filesystem::path>& legacy_settings_path);
 
-        FileWorker(FileWorker &&) = delete;
+    std::filesystem::path settings_path_;
+    mutable std::mutex mutex_;
+};
 
-        FileWorker &operator=(FileWorker &&) = delete;
-
-        ~FileWorker();
-
-    private:
-        FileWorker();
-
-    public:
-        std::expected<void, std::string> write_settings(std::string settings_text);
-
-        std::expected<std::string, std::string> load_settings();
-
-        bool is_settings_file_exists_or_empty();
-
-    private:
-        void initialize();
-    };
-}
+}  // namespace tpc_qt::services

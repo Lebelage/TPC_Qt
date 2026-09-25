@@ -5,6 +5,8 @@ project(TPC_Qt
         LANGUAGES CXX
 )
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -12,6 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 REQUIRED COMPONENTS
         Core
+        Concurrent
         Gui
         Qml
         Quick
@@ -19,11 +22,12 @@ find_package(Qt6 REQUIRED COMPONENTS
         Widgets
 )
 
-find_package(nlohmann_json)
+find_package(nlohmann_json REQUIRED)
 
 qt_standard_project_setup()
 
 qt_policy(SET QTP0001 NEW)
+qt_policy(SET QTP0004 NEW)
 
 # ============================================================
 # C++ sources
@@ -37,11 +41,7 @@ file(GLOB_RECURSE CPP_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
 )
 
-# ============================================================
-# QML sources
-# ВАЖНО: пути делаем относительными, иначе Qt resource system
-# ругается на absolute path.
-# ============================================================
+# QML resource paths must be relative to the source directory.
 
 file(GLOB_RECURSE QML_FILES
         CONFIGURE_DEPENDS
@@ -54,13 +54,37 @@ file(GLOB_RECURSE QML_FILES
 # TPC API
 # ============================================================
 
-add_subdirectory(
-        #"C:/Users/excep/CLionProjects/TPC_API"
-        #/Users/sonora/dev/projects/TPC_API
-        /home/sonora/CLionProjects/TPC_API
-        #"${CMAKE_BINARY_DIR}/TPC_API"
-        ${CMAKE_BINARY_DIR}/TPC_API
-)
+# Development builds can consume a TPC_API source checkout. Packaged/CI builds
+# can instead provide an installed TPC package through CMAKE_PREFIX_PATH.
+option(TPC_QT_USE_INSTALLED_TPC "Require an installed TPC CMake package" OFF)
+set(TPC_API_DIR "" CACHE PATH "Optional path to the TPC_API source tree")
+
+if(NOT TPC_QT_USE_INSTALLED_TPC AND NOT TPC_API_DIR)
+    get_filename_component(_tpc_home "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
+    set(_tpc_api_candidates
+            "$ENV{TPC_API_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../TPC_API"
+            "${_tpc_home}/dev/projects/TPC_API"
+    )
+
+    foreach(_candidate IN LISTS _tpc_api_candidates)
+        if(_candidate AND EXISTS "${_candidate}/CMakeLists.txt")
+            set(TPC_API_DIR "${_candidate}" CACHE PATH "Optional path to the TPC_API source tree" FORCE)
+            break()
+        endif()
+    endforeach()
+endif()
+
+if(TPC_QT_USE_INSTALLED_TPC)
+    find_package(TPC CONFIG REQUIRED)
+elseif(TPC_API_DIR)
+    if(NOT EXISTS "${TPC_API_DIR}/CMakeLists.txt")
+        message(FATAL_ERROR "TPC_API_DIR does not contain CMakeLists.txt: '${TPC_API_DIR}'")
+    endif()
+    add_subdirectory("${TPC_API_DIR}" "${CMAKE_BINARY_DIR}/TPC_API" EXCLUDE_FROM_ALL)
+else()
+    find_package(TPC CONFIG REQUIRED)
+endif()
 
 # ============================================================
 # Executable
@@ -68,9 +92,6 @@ add_subdirectory(
 
 qt_add_executable(TPC_Qt
         ${CPP_SOURCES}
-        src/services/file_dialog/file_dialog_service.hpp
-        src/services/file_dialog/file_dialog_service.cpp
-
 )
 
 set_target_properties(TPC_Qt PROPERTIES
@@ -84,7 +105,6 @@ set_target_properties(TPC_Qt PROPERTIES
 qt_add_qml_module(TPC_Qt
         URI TPC
         VERSION 1.0
-        # Обязательно передаем C++ файлы сюда для корректной генерации moc/qml-регистраций
         SOURCES
         ${CPP_SOURCES}
 
@@ -113,13 +133,14 @@ target_compile_definitions(TPC_Qt PRIVATE QT_NO_KEYWORDS)
 target_link_libraries(TPC_Qt
         PRIVATE
         Qt6::Core
+        Qt6::Concurrent
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
         Qt6::QuickControls2
         Qt6::Widgets
 
-        tpc_system
+        TPC::TPC
 
         nlohmann_json::nlohmann_json
 )
@@ -128,17 +149,13 @@ target_link_libraries(TPC_Qt
 # macOS
 # ============================================================
 
-if(APPLE)
-    set_target_properties(TPC_Qt PROPERTIES
-            MACOSX_BUNDLE TRUE
-    )
-endif()
-
-if(WIN32)
-    set_target_properties(TPC_Qt PROPERTIES
-            WIN32_EXECUTABLE FALSE
-    )
-endif()
+set_target_properties(TPC_Qt PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_GUI_IDENTIFIER "org.tpc.controller"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
+        WIN32_EXECUTABLE TRUE
+)
 
 # ============================================================
 # MSVC
@@ -153,59 +170,18 @@ if(MSVC)
 endif()
 
 # ============================================================
-# Windows runtime DLL deployment
-#
-# Копирует DLL зависимостей, которые CMake видит как targets.
-# Сюда обычно попадают vcpkg DLL:
-#
-#   open62541.dll
-#   open62541pp.dll
-#   и т.д.
+# Installation and Qt runtime deployment
 # ============================================================
 
-if(WIN32)
+install(TARGETS TPC_Qt
+        BUNDLE DESTINATION .
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+)
 
-    add_custom_command(
-            TARGET TPC_Qt
-            POST_BUILD
+qt_generate_deploy_qml_app_script(
+        TARGET TPC_Qt
+        OUTPUT_SCRIPT qt_deploy_script
+        NO_UNSUPPORTED_PLATFORM_ERROR
+)
 
-            COMMAND
-            ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:TPC_Qt>
-            $<TARGET_FILE_DIR:TPC_Qt>
-
-            COMMAND_EXPAND_LISTS
-
-            COMMENT
-            "Copying runtime DLL dependencies..."
-    )
-
-endif()
-
-# ============================================================
-# Qt deployment
-# ============================================================
-
-if(WIN32)
-
-    # Qt предоставляет путь к windeployqt через target Qt6::windeployqt.
-    # Используем generator expression вместо захардкоженного
-    # C:/Qt/6.xx/bin/windeployqt.exe.
-
-    add_custom_command(
-            TARGET TPC_Qt
-            POST_BUILD
-
-            COMMAND
-            "$<TARGET_FILE:Qt6::windeployqt>"
-
-            --dir "$<TARGET_FILE_DIR:TPC_Qt>"
-            --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
-
-            "$<TARGET_FILE:TPC_Qt>"
-
-            COMMENT
-            "Deploying Qt runtime and QML dependencies..."
-    )
-
-endif()
+install(SCRIPT "${qt_deploy_script}")

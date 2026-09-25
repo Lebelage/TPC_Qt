@@ -2,50 +2,59 @@
 
 #include <QObject>
 
-#include "controls/WorkspaceTabViewModel.hpp"
 #include "controls/BottomBarViewModel.hpp"
 #include "controls/SettingsTabViewModel.hpp"
-
+#include "controls/WorkspaceTabViewModel.hpp"
+#include "FieldVisualizationViewModel.hpp"
 #include "models/ui/tabs_indexing_model.hpp"
+#include "services/scoped_subscription.hpp"
+
+namespace tpc_qt::services {
+class EventDispatcher;
+class SettingsHolderService;
+class TpcService;
+class FieldSliceService;
+}
+
 namespace tpc_qt::view_models {
 
-class MainViewModel : public QObject {
+/** Root QML context object and owner of the screen-level view models. */
+class MainViewModel final : public QObject {
     Q_OBJECT
 
     Q_PROPERTY(WorkspaceViewModel* workspace READ workspace CONSTANT)
-    Q_PROPERTY(BottomBarViewModel* bottomBar READ bottom_bar CONSTANT)
+    Q_PROPERTY(BottomBarViewModel* bottomBar READ bottomBar CONSTANT)
     Q_PROPERTY(SettingsViewModel* settings READ settings CONSTANT)
-
-    Q_PROPERTY(int current_tab_index READ current_tab_index NOTIFY current_tab_index_changed)
+    Q_PROPERTY(FieldVisualizationViewModel* fieldVisualization READ fieldVisualization CONSTANT)
+    Q_PROPERTY(int currentTabIndex READ currentTabIndex NOTIFY currentTabIndexChanged)
 
 public:
-    explicit MainViewModel(QObject *parent = nullptr);
+    MainViewModel(
+        services::EventDispatcher& events,
+        services::SettingsHolderService& settings,
+        services::TpcService& tpc,
+        services::FieldSliceService& field_slices,
+        QObject* parent = nullptr
+    );
 
-    WorkspaceViewModel* workspace() const noexcept { return workspace_; }
-    BottomBarViewModel* bottom_bar() const noexcept { return bottom_bar_; }
-    SettingsViewModel* settings() const noexcept { return settings_; }
-
-    int current_tab_index() const noexcept {
-        return static_cast<int>(current_tab_);
-    }
+    [[nodiscard]] WorkspaceViewModel* workspace() noexcept { return &workspace_; }
+    [[nodiscard]] BottomBarViewModel* bottomBar() noexcept { return &bottom_bar_; }
+    [[nodiscard]] SettingsViewModel* settings() noexcept { return &settings_; }
+    [[nodiscard]] FieldVisualizationViewModel* fieldVisualization() noexcept { return &field_visualization_; }
+    [[nodiscard]] int currentTabIndex() const noexcept { return static_cast<int>(current_tab_); }
 
 Q_SIGNALS:
-    void current_tab_index_changed();
+    void currentTabIndexChanged();
 
 private:
-    void on_tab_change_requested(models::ui::TabsIndexingModel target_tab) {
-        if (current_tab_ == target_tab) return;
+    void onTabChangeRequested(models::ui::TabsIndexingModel target_tab);
 
-        current_tab_ = target_tab;
-        Q_EMIT current_tab_index_changed();
-    }
-
-private:
-    WorkspaceViewModel* workspace_;
-    BottomBarViewModel* bottom_bar_;
-    SettingsViewModel* settings_;
-
+    WorkspaceViewModel workspace_;
+    BottomBarViewModel bottom_bar_;
+    SettingsViewModel settings_;
+    FieldVisualizationViewModel field_visualization_;
     models::ui::TabsIndexingModel current_tab_{models::ui::TabsIndexingModel::Workspace};
+    services::ScopedSubscription<models::ui::TabsIndexingModel> tab_subscription_;
 };
 
-} // namespace tpc_qt::view_models
+}  // namespace tpc_qt::view_models

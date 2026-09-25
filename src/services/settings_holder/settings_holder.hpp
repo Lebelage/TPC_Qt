@@ -1,59 +1,56 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <expected>
+#include <mutex>
 #include <string>
 #include <vector>
 
 #include "models/application_settings_model.hpp"
-#include "models/tpc_data_model.hpp"
-#include "tpc_system/models/data.hpp"
-using namespace tpc_qt::models;
+#include "services/scoped_subscription.hpp"
 
 namespace tpc_qt::services {
-struct AppSettings;
 
-class SettingsHolderService {
+class EventDispatcher;
+class FileWorker;
+
+/** Loads, validates, persists, and publishes the current application settings. */
+class SettingsHolderService final {
 public:
-    static SettingsHolderService& instance();
+    SettingsHolderService(EventDispatcher& events, FileWorker& file_worker);
 
     SettingsHolderService(const SettingsHolderService&) = delete;
-
     SettingsHolderService& operator=(const SettingsHolderService&) = delete;
-
     SettingsHolderService(SettingsHolderService&&) = delete;
-
     SettingsHolderService& operator=(SettingsHolderService&&) = delete;
 
-    ~SettingsHolderService();
+    ~SettingsHolderService() = default;
+
+    void applySettings();
+    [[nodiscard]] std::expected<void, std::string> loadSettings();
+
+    void setConnectionParameters(models::ConnectionParameters parameters);
+    void setGeometryParameters(models::TpcGeometryParams parameters);
+    void setGridParameters(std::array<std::size_t, 3> grid);
+
+    [[nodiscard]] models::AppSettings currentSettings() const;
 
 private:
-    SettingsHolderService();
+    [[nodiscard]] static models::AppSettings defaultSettings();
+    static void setDefaultSensorPositions(
+        std::vector<models::SensorInfo>& sensors,
+        models::TpcGeometryParams geometry
+    );
+    void validateAndStore(models::AppSettings settings);
+    void mergeSensors(const std::vector<models::SensorInfo>& sensors, bool replace_coordinates);
+    void onInitializationDataReceived(std::vector<models::SensorName> sensor_names);
 
-public:
-    void apply_settings();
-
-    std::expected<void, std::string> load_settings();
-
-    void set_connection_parameters(ConnectionParameters);
-    void set_geometry_parameters(TpcGeometryParams);
-    void set_grid_parameters(std::array<size_t, 3>);
-    void set_sensors_parameters(std::vector<SensorInfo>);
-
-    [[nodiscard]] const models::AppSettings& get_current_settings() const noexcept;
-
-private:
-    models::AppSettings initialize_by_defaults();
-
-    void validate_and_confirm_settings(models::AppSettings settings);
-
-    void validate_sensors_parameters(std::vector<SensorInfo> sensors_parameters, bool replace_coordinates = false);
-
-    void validate_settings();
-
-private:
-void initialization_data_received(std::vector<SensorName> discovery_sensors_names);
-
-private:
+    EventDispatcher& events_;
+    FileWorker& file_worker_;
+    mutable std::mutex mutex_;
     models::AppSettings current_settings_{};
+    ScopedSubscription<std::vector<models::SensorName>> initialization_subscription_;
 };
+
 }  // namespace tpc_qt::services

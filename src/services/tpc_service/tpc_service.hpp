@@ -1,89 +1,70 @@
 #pragma once
 
-#include <cstdint>
+#include <cstddef>
 #include <memory>
 #include <mutex>
-#include <optional>
-#include <span>
+#include <expected>
+#include <shared_mutex>
+#include <stop_token>
 #include <string>
+#include <string_view>
 #include <unordered_map>
-#include <vector>
 
 #include "models/application_settings_model.hpp"
+#include "models/field_slice_model.hpp"
 #include "models/tpc_data_model.hpp"
-#include "tpc_analytics/models/three_dimension_models.hpp"
-#include "tpc_system/client/client.hpp"
-#include "tpc_system/models/data.hpp"
-#include "tpc_system/tpc.hpp"
-#include "utilities/event_handler.hpp"
-namespace tpc_qt::models{
-    struct AppSettings;
-}
 
 namespace tpc_qt::services {
-enum class ConnectionStatus {
-    Connected,
-    Inactive,
-    Disconnected,
-};
 
-class TpcService {
+class EventDispatcher;
+struct TpcServiceBackend;
+
+/**
+ * Owns the TPC backend and translates its worker-thread events into
+ * application-level events and calculation data.
+ */
+class TpcService final {
 public:
-    static TpcService& instance();
+    explicit TpcService(EventDispatcher& events);
 
     TpcService(const TpcService&) = delete;
-
     TpcService& operator=(const TpcService&) = delete;
-
     TpcService(TpcService&&) = delete;
-
     TpcService& operator=(TpcService&&) = delete;
 
     ~TpcService();
 
-private:
-    TpcService();
+    /** Creates a backend for the endpoint and starts its connection worker. */
+    [[nodiscard]] bool connectAsync(std::string endpoint);
+    void disconnect();
 
-public:
-    [[nodiscard]]
-    ConnectionStatus get_connection_status() const noexcept;
+    void calculateField();
+    [[nodiscard]] std::expected<models::NumericFieldSlice, std::string> calculateFieldSlice(
+        int axis,
+        double coordinate,
+        std::array<std::size_t, 2> grid,
+        std::stop_token stop_token = {}
+    );
+    [[nodiscard]] bool exportFieldToVtk(std::string_view file_path);
 
-    [[nodiscard]] auto get_frame_request() -> std::optional<std::unordered_map<std::string, double>>;
-
-    bool connect_async(std::string endpoint);
-
-    void disconnect_async();
-
-    void calculate_field_3d();
-
-    void export_field_to_vtk(std::string_view file_path);
-
-public:
-    auto dispose() -> void;
+    /** Stops background work and releases all backend subscriptions. */
+    void dispose() noexcept;
 
 private:
-    std::vector<tpc::analytics::models::Measurement> create_measurments();
+    void subscribeToBackendEvents();
+    void startPolling();
+    void onSettingsChanged(const models::AppSettings& settings);
+    void onFrameReceived(std::unordered_map<std::string, double> frame);
+    void onFieldWasCalculated(bool is_calculated);
 
 private:
-    auto on_connection_state_changed(tpc::system::client::ConnectionState) -> void;
+    EventDispatcher& events_;
+    mutable std::shared_mutex backend_mutex_;
+    mutable std::mutex data_mutex_;
+    models::TpcDataModel tpc_data_;
+    std::size_t polling_interval_ms_{0};
 
-    auto on_client_initialization_data_received(tpc::system::models::DiscoveryResult) -> void;
-
-    auto on_settings_changed(const models::AppSettings&) -> void;
-
-public:
-    tpc::utilities::event_handler<tpc::system::client::ConnectionState> connection_state_changed_;
-    tpc::utilities::event_handler<tpc::system::models::DiscoveryResult> initialization_data_received_;
-
-private:
-    mutable std::mutex mutex_;
-
-    models::TpcDataModel tpc_data_{};
-
-    std::unique_ptr<tpc::system::TPC> tpc_;
-
-    std::vector<std::uint8_t> handlers_ids_;
-
-    ConnectionStatus connection_status_{ConnectionStatus::Disconnected};
+    std::unique_ptr<TpcServiceBackend> backend_;
 };
+
 }  // namespace tpc_qt::services

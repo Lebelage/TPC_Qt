@@ -1,84 +1,82 @@
 #pragma once
 
 #include <QObject>
+#include <QString>
 
-namespace tpc::system::models {
-    struct DiscoveryResult;
-}
+#include "models/application_settings_model.hpp"
+#include "services/scoped_subscription.hpp"
 
-namespace tpc_qt::models{
-    struct AppSettings;
+namespace tpc_qt::services {
+class EventDispatcher;
+class SettingsHolderService;
 }
 
 namespace tpc_qt::view_models {
-    class SettingsViewModel : public QObject {
-        Q_OBJECT
 
-        Q_PROPERTY(double tpcLength READ get_tpcLength WRITE set_tpcLength NOTIFY tpcLengthChanged)
-        Q_PROPERTY(double tpcRadius READ get_tpcRadius WRITE set_tpcRadius NOTIFY tpcRadiusChanged)
-        Q_PROPERTY(QString endpoint READ get_endpoint WRITE set_endpoint NOTIFY endpointChanged)
-        Q_PROPERTY(int pollingInterval READ get_pollingInterval WRITE set_pollingInterval NOTIFY pollingIntervalChanged)
-        Q_PROPERTY(int gridNx READ get_gridNx WRITE set_gridNx NOTIFY gridNxChanged)
-        Q_PROPERTY(int gridNy READ get_gridNy WRITE set_gridNy NOTIFY gridNyChanged)
-        Q_PROPERTY(int gridNz READ get_gridNz WRITE set_gridNz NOTIFY gridNzChanged)
+/** Editable settings state exposed to the settings QML page. */
+class SettingsViewModel final : public QObject {
+    Q_OBJECT
 
-    public:
-        explicit SettingsViewModel(QObject *parent = nullptr);
+    Q_PROPERTY(double tpcLength READ tpcLength WRITE setTpcLength NOTIFY tpcLengthChanged)
+    Q_PROPERTY(double tpcRadius READ tpcRadius WRITE setTpcRadius NOTIFY tpcRadiusChanged)
+    Q_PROPERTY(QString endpoint READ endpoint WRITE setEndpoint NOTIFY endpointChanged)
+    Q_PROPERTY(int pollingInterval READ pollingInterval WRITE setPollingInterval NOTIFY pollingIntervalChanged)
+    Q_PROPERTY(int gridNx READ gridNx WRITE setGridNx NOTIFY gridNxChanged)
+    Q_PROPERTY(int gridNy READ gridNy WRITE setGridNy NOTIFY gridNyChanged)
+    Q_PROPERTY(int gridNz READ gridNz WRITE setGridNz NOTIFY gridNzChanged)
 
-    public:
-        double get_tpcLength() const;
+public:
+    SettingsViewModel(
+        services::EventDispatcher& events,
+        services::SettingsHolderService& settings,
+        QObject* parent = nullptr
+    );
 
-        void set_tpcLength(double tpcLength);
+    [[nodiscard]] double tpcLength() const noexcept { return tpc_length_; }
+    void setTpcLength(double value);
 
-        double get_tpcRadius() const;
+    [[nodiscard]] double tpcRadius() const noexcept { return tpc_radius_; }
+    void setTpcRadius(double value);
 
-        void set_tpcRadius(double tpcRadius);
+    [[nodiscard]] QString endpoint() const { return endpoint_; }
+    void setEndpoint(const QString& value);
 
-        QString get_endpoint() const;
+    [[nodiscard]] int pollingInterval() const noexcept { return polling_interval_; }
+    void setPollingInterval(int value);
 
-        void set_endpoint(const QString &endpoint);
+    [[nodiscard]] int gridNx() const noexcept { return grid_nx_; }
+    void setGridNx(int value);
 
-        int get_pollingInterval() const;
+    [[nodiscard]] int gridNy() const noexcept { return grid_ny_; }
+    void setGridNy(int value);
 
-        void set_pollingInterval(int pollingInterval);
+    [[nodiscard]] int gridNz() const noexcept { return grid_nz_; }
+    void setGridNz(int value);
 
-        int get_gridNx() const;
-        void set_gridNx(int gridNx);
+    Q_INVOKABLE void applySettings();
+    Q_INVOKABLE void loadSettings();
 
-        int get_gridNy() const;
-        void set_gridNy(int gridNy);
+Q_SIGNALS:
+    void tpcLengthChanged();
+    void tpcRadiusChanged();
+    void endpointChanged();
+    void pollingIntervalChanged();
+    void gridNxChanged();
+    void gridNyChanged();
+    void gridNzChanged();
 
-        int get_gridNz() const;
-        void set_gridNz(int gridNz);
+private:
+    void onSettingsChanged(models::AppSettings settings);
 
-    public:
-        Q_INVOKABLE void apply_settings_command();
+    services::SettingsHolderService& settings_service_;
+    QString endpoint_;
+    int polling_interval_{0};
+    double tpc_length_{0.0};
+    double tpc_radius_{0.0};
+    int grid_nx_{1};
+    int grid_ny_{1};
+    int grid_nz_{1};
+    services::ScopedSubscription<const models::AppSettings&> settings_subscription_;
+};
 
-        Q_INVOKABLE void load_settings_command();
-
-    Q_SIGNALS:
-        void tpcLengthChanged();
-
-        void tpcRadiusChanged();
-
-        void endpointChanged();
-
-        void pollingIntervalChanged();
-
-        void gridNxChanged();
-        void gridNyChanged();
-        void gridNzChanged();
-
-    private:
-
-    void on_settings_changed(const models::AppSettings&);
-    private:
-        QString endpoint_{""};
-        int polling_interval_{0};
-        double tpc_length_{0};
-        double tpc_radius_{0};
-        int grid_nx_{1};
-        int grid_ny_{1};
-        int grid_nz_{1};
-    };
-}
+}  // namespace tpc_qt::view_models

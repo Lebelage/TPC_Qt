@@ -26,24 +26,24 @@ Rectangle {
         }
 
         StyledButton {
-            width: 100
+            Layout.preferredWidth: 100
             cornerRadius: 8
             text: root.dataContext.isConnected ? "Disconnect" : "Connect"
             onClicked: {
                 if (root.dataContext.isConnected)
-                    root.dataContext.disconnection_command()
+                    root.dataContext.disconnectFromTpc()
                 else
-                    root.dataContext.connection_command()
+                    root.dataContext.connectToTpc()
             }
         }
 
         StyledButton {
-            width: 100
+            Layout.preferredWidth: 100
             cornerRadius: 8
-            text: root.dataContext.switch_tab_button_name
+            text: root.dataContext.switchTabButtonName
 
             onClicked: {
-                root.dataContext.switch_tab_command()
+                root.dataContext.toggleTab()
             }
         }
     }

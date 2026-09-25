@@ -1,119 +1,31 @@
 #include "services/tpc_service/tpc_service.hpp"
 
-#include <algorithm>
-#include <exception>
-#include <iostream>
-#include <mutex>
-#include <optional>
+#include <array>
 #include <ranges>
 #include <span>
-#include <string>
-#include <unordered_map>
+#include <utility>
+#include <vector>
 
-#include "models/application_settings_model.hpp"
 #include "services/event_dispatcher/event_dispatcher.hpp"
-#include "services/settings_holder/settings_holder.hpp"
-#include "tpc_analytics/models/three_dimension_models.hpp"
+#include "services/scoped_subscription.hpp"
+#include "tpc/tpc.hpp"
+
 namespace tpc_qt::services {
-#pragma region Constructor/Destructor
-TpcService& TpcService::instance() {
-    static TpcService service;
-    return service;
-}
+namespace {
 
-TpcService::TpcService() {
-    auto result = tpc::system::TPC::create("opc.tcp://127.0.0.1:1234");
-
-    if (!result)
-        return;
-
-    tpc_ = std::move(*result);
-
-    tpc_->connection_state_changed_.subscribe([this](tpc::system::client::ConnectionState state) {
-        on_connection_state_changed(state);
-    });
-
-    tpc_->initialization_data_received_.subscribe([this](tpc::system::models::DiscoveryResult result) {
-        on_client_initialization_data_received(result);
-    });
-
-    EventDispatcher::instance().settings_changed.subscribe([this](const models::AppSettings& settings) {
-        on_settings_changed(settings);
-    });
-}
-
-TpcService::~TpcService() {
-    dispose();
-}
-
-auto TpcService::dispose() -> void {
-    connection_state_changed_.dispose();
-    disconnect_async();
-}
-#pragma endregion
-
-#pragma region Properties
-ConnectionStatus TpcService::get_connection_status() const noexcept {
-    std::scoped_lock lock{mutex_};
-    return connection_status_;
-}
-
-auto TpcService::get_frame_request() -> std::optional<std::unordered_map<std::string, double>> {
-    auto result = tpc_->get_frame_request();
-    if (!result)
-        return std::nullopt;
-
-    tpc_data_.set_received_frame(result.value());
-
-    return result.value();
-}
-
-#pragma endregion
-
-#pragma region Public methods
-
-bool TpcService::connect_async(std::string endpoint) {
-    tpc_->start_async();
-    return true;
-}
-
-void TpcService::disconnect_async() {
-    if (tpc_)
-        tpc_->stop_async();
-}
-
-void TpcService::calculate_field_3d() {
-    if (!tpc_)
-        return;
-
-    tpc_->calculate_field_async(create_measurments(), tpc_data_.grid(), tpc_data_.radius(), tpc_data_.length());
-}
-void TpcService::export_field_to_vtk(std::string_view file_path) {
-    if (!tpc_)
-        return;
-
-    auto result = tpc_->export_to_vtk(file_path);
-
-    if (!result)
-        return;
-}
-
-#pragma endregion
-
-#pragma region Private methods
-std::vector<tpc::analytics::models::Measurement> TpcService::create_measurments() {
-    auto sensors = tpc_data_.sensors();
-
+[[nodiscard]] std::vector<tpc::analytics::models::Measurement> createMeasurements(
+    std::span<const models::Sensor> sensors
+) {
     std::vector<tpc::analytics::models::Measurement> measurements;
+    measurements.reserve(sensors.size());
 
     for (const auto& sensor : sensors) {
         tpc::analytics::models::PointComponents point{
-            .components = {sensor.position | std::ranges::to<std::array<double, 3>>()},
+            .components = sensor.position,
             .coordinate_type = tpc::analytics::models::CoordinateType::Cartesian
         };
-
         tpc::analytics::models::FieldComponents field{
-            .components = {sensor.values | std::ranges::to<std::array<double, 3>>()},
+            .components = sensor.values,
             .coordinate_type = tpc::analytics::models::CoordinateType::Cylindric
         };
 
@@ -122,39 +34,215 @@ std::vector<tpc::analytics::models::Measurement> TpcService::create_measurments(
 
     return measurements;
 }
-#pragma endregion
 
-#pragma region Handlers
-auto TpcService::on_connection_state_changed(tpc::system::client::ConnectionState state) -> void {
-    connection_state_changed_.invoke(state);
+}  // namespace
+
+struct TpcServiceBackend final {
+    std::unique_ptr<tpc::system::TPC> tpc;
+
+    // Subscriptions are declared after TPC so they are released first.
+    ScopedSubscription<tpc::system::client::ConnectionState> connection_subscription;
+    ScopedSubscription<tpc::system::models::DiscoveryResult> initialization_subscription;
+    ScopedSubscription<std::unordered_map<std::string, double>> frame_subscription;
+    ScopedSubscription<bool> field_calculation_subscription;
+    ScopedSubscription<const models::AppSettings&> settings_subscription;
+};
+
+TpcService::TpcService(EventDispatcher& events)
+    : events_(events), backend_(std::make_unique<TpcServiceBackend>()) {
+    backend_->settings_subscription.subscribe(
+        events_.settings_changed,
+        [this](const models::AppSettings& settings) { onSettingsChanged(settings); }
+    );
 }
 
-auto TpcService::on_client_initialization_data_received(tpc::system::models::DiscoveryResult discovery_result) -> void {
-    auto result = SensorName::parse_names_range(discovery_result.nodes | std::views::values);
-
-    if (!result)
-        return;
-
-    EventDispatcher::instance().initialization_data_received.invoke(result.value());
-
-    initialization_data_received_.invoke(discovery_result);
+TpcService::~TpcService() {
+    dispose();
 }
 
-auto TpcService::on_settings_changed(const models::AppSettings& settings) -> void {
-    std::vector<Sensor> sensors{};
+bool TpcService::connectAsync(std::string endpoint) {
+    // The backend binds its endpoint at construction, so applying a changed
+    // endpoint requires replacing the previous instance.
+    disconnect();
+    std::unique_lock backend_lock{backend_mutex_};
+    backend_->connection_subscription.reset();
+    backend_->initialization_subscription.reset();
+    backend_->frame_subscription.reset();
+    backend_->field_calculation_subscription.reset();
+    backend_->tpc.reset();
 
-    for (const auto& sensor : settings.sensors_info) {
-        sensors.push_back({
-            .name = sensor.name, .position = {sensor.x, sensor.y, sensor.z}
-        });
+    auto result = tpc::system::TPC::create(endpoint);
+    if (!result) {
+        return false;
     }
 
-    tpc_data_.set_sensors(sensors);
-    tpc_data_.set_length(settings.geometry.length);
-    tpc_data_.set_radius(settings.geometry.radius);
-    tpc_data_.set_grid(settings.grid);
-
+    backend_->tpc = std::move(*result);
+    subscribeToBackendEvents();
+    backend_->tpc->start_async();
+    backend_lock.unlock();
+    startPolling();
+    return true;
 }
 
-#pragma endregion
+void TpcService::disconnect() {
+    std::shared_lock backend_lock{backend_mutex_};
+    if (backend_->tpc) {
+        backend_->tpc->stop_async();
+    }
+}
+
+void TpcService::calculateField() {
+    std::shared_lock backend_lock{backend_mutex_};
+    if (!backend_->tpc) {
+        return;
+    }
+
+    std::vector<tpc::analytics::models::Measurement> measurements;
+    std::array<std::size_t, 3> grid{};
+    double radius = 0.0;
+    double length = 0.0;
+
+    {
+        std::scoped_lock lock{data_mutex_};
+        measurements = createMeasurements(tpc_data_.sensors());
+        grid = tpc_data_.grid();
+        radius = tpc_data_.radius();
+        length = tpc_data_.length();
+    }
+
+    backend_->tpc->calculate_field_async(std::move(measurements), grid, radius, length);
+}
+
+std::expected<models::NumericFieldSlice, std::string> TpcService::calculateFieldSlice(
+    int axis,
+    double coordinate,
+    std::array<std::size_t, 2> grid,
+    std::stop_token stop_token
+) {
+    std::shared_lock backend_lock{backend_mutex_};
+    if (!backend_->tpc) {
+        return std::unexpected{"TPC backend is not initialized"};
+    }
+
+    double radius = 0.0;
+    double length = 0.0;
+    {
+        std::scoped_lock lock{data_mutex_};
+        radius = tpc_data_.radius();
+        length = tpc_data_.length();
+    }
+
+    const auto direction = axis == 0 ? tpc::analytics::models::SliceDirection::X
+        : axis == 1 ? tpc::analytics::models::SliceDirection::Y
+                    : tpc::analytics::models::SliceDirection::Z;
+    auto result = backend_->tpc->get_field_slice(direction, coordinate, grid, radius, length, stop_token);
+    if (!result) {
+        return std::unexpected{result.error()};
+    }
+
+    return models::NumericFieldSlice{
+        .grid = result->grid,
+        .horizontal_bounds = result->horizontal_bounds,
+        .vertical_bounds = result->vertical_bounds,
+        .field = std::move(result->field),
+        .valid = std::move(result->valid)
+    };
+}
+
+bool TpcService::exportFieldToVtk(std::string_view file_path) {
+    std::shared_lock backend_lock{backend_mutex_};
+    if (!backend_->tpc) {
+        return false;
+    }
+
+    return backend_->tpc->export_to_vtk(file_path).has_value();
+}
+
+void TpcService::dispose() noexcept {
+    backend_->connection_subscription.reset();
+    backend_->initialization_subscription.reset();
+    backend_->frame_subscription.reset();
+    backend_->settings_subscription.reset();
+    backend_->field_calculation_subscription.reset();
+
+    std::unique_lock backend_lock{backend_mutex_};
+    if (backend_->tpc) {
+        backend_->tpc->stop_async();
+    }
+    backend_->tpc.reset();
+}
+
+void TpcService::subscribeToBackendEvents() {
+    backend_->connection_subscription.subscribe(
+        backend_->tpc->connection_state_changed_,
+        [this](tpc::system::client::ConnectionState state) {
+            const bool connected = state == tpc::system::client::ConnectionState::Connected
+                || state == tpc::system::client::ConnectionState::SessionActivated;
+            events_.connection_state_changed.invoke(connected);
+        }
+    );
+    backend_->initialization_subscription.subscribe(
+        backend_->tpc->initialization_data_received_,
+        [this](tpc::system::models::DiscoveryResult result) {
+            const auto names = models::SensorName::parseNames(result.nodes | std::views::values);
+            if (names) {
+                events_.initialization_data_received.invoke(*names);
+            }
+        }
+    );
+    backend_->frame_subscription.subscribe(
+        backend_->tpc->frame_received_,
+        [this](std::unordered_map<std::string, double> frame) { onFrameReceived(std::move(frame)); }
+    );
+    backend_->field_calculation_subscription.subscribe(
+        backend_->tpc->field_was_calculated_,
+        [this](bool is_calculated) { onFieldWasCalculated(is_calculated); }
+    );
+}
+
+void TpcService::startPolling() {
+    std::size_t interval = 0;
+    {
+        std::scoped_lock lock{data_mutex_};
+        interval = polling_interval_ms_;
+    }
+
+    std::shared_lock backend_lock{backend_mutex_};
+    if (backend_->tpc && interval > 0) {
+        backend_->tpc->start_polling_async(interval);
+    }
+}
+
+void TpcService::onSettingsChanged(const models::AppSettings& settings) {
+    std::vector<models::Sensor> sensors;
+    sensors.reserve(settings.sensors_info.size());
+
+    for (const auto& sensor : settings.sensors_info) {
+        sensors.push_back({.name = sensor.name, .position = {sensor.x, sensor.y, sensor.z}});
+    }
+
+    {
+        std::scoped_lock lock{data_mutex_};
+        tpc_data_.setSensors(std::move(sensors));
+        tpc_data_.setGeometry(settings.geometry.length, settings.geometry.radius);
+        tpc_data_.setGrid(settings.grid);
+        polling_interval_ms_ = static_cast<std::size_t>(settings.connection.polling_interval);
+    }
+
+    startPolling();
+}
+
+void TpcService::onFrameReceived(std::unordered_map<std::string, double> frame) {
+    {
+        std::scoped_lock lock{data_mutex_};
+        tpc_data_.setReceivedFrame(frame);
+    }
+
+    events_.frame_received.invoke(frame);
+}
+
+void TpcService::onFieldWasCalculated(bool is_calculated) {
+    events_.field_was_calculated_.invoke(is_calculated);
+}
+
 }  // namespace tpc_qt::services

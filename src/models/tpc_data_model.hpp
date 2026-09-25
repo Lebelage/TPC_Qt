@@ -1,8 +1,10 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <ranges>
@@ -13,137 +15,88 @@
 #include <utility>
 #include <vector>
 
-#include "tpc_system/models/data.hpp"
-
 namespace tpc_qt::models {
 
 enum class SensorNameKey : char { W = 'W', E = 'E' };
+enum class SensorNameComponent : std::size_t { R, F, Z };
+enum class SensorCoordinate : std::size_t { X, Y, Z };
 
-enum class SensorNameComponent : char { R = 0, F = 1, Z = 2 };
-
+/** Parsed sensor identity without its measured component suffix. */
 struct SensorName {
     SensorNameKey id{SensorNameKey::W};
     std::uint16_t number{};
 
-    [[nodiscard]]
-    std::string to_string() const {
-        std::string result;
-        result.reserve(3);
-
-        result += static_cast<char>(id);
-        result += std::to_string(number);
-
-        return result;
+    [[nodiscard]] std::string toString() const {
+        return std::string{static_cast<char>(id)} + std::to_string(number);
     }
 
-    [[nodiscard]]
-    constexpr std::size_t component_index(SensorNameComponent component) const noexcept {
-        switch (component) {
-            case SensorNameComponent::R:
-                return 0;
-            case SensorNameComponent::F:
-                return 1;
-            case SensorNameComponent::Z:
-                return 2;
-        }
-
-        return 0;
-    }
-
-    [[nodiscard]]
-    static std::expected<SensorName, std::string> parse_name(std::string_view text) {
-        const auto error = [&] {
+    [[nodiscard]] static std::expected<SensorName, std::string> parse(std::string_view text) {
+        const auto invalidName = [text] {
             return std::unexpected{"Invalid sensor name: " + std::string{text}};
         };
 
-        if (text.size() < 3) {
-            return error();
+        // Accept both a physical sensor name (W12) and a channel name (W12R).
+        if (text.size() < 2) {
+            return invalidName();
         }
 
         SensorName result;
-
         switch (text.front()) {
-            case 'W':
-                result.id = SensorNameKey::W;
-                break;
-
-            case 'E':
-                result.id = SensorNameKey::E;
-                break;
-
-            default:
-                return error();
+            case 'W': result.id = SensorNameKey::W; break;
+            case 'E': result.id = SensorNameKey::E; break;
+            default: return invalidName();
         }
 
-        const std::string_view number_text = text.substr(1, text.size() - 2);
+        const bool has_component = text.back() == 'R' || text.back() == 'F' || text.back() == 'Z';
+        const std::size_t number_length = text.size() - 1 - static_cast<std::size_t>(has_component);
+        const std::string_view number_text = text.substr(1, number_length);
+        const auto [end, error] = std::from_chars(
+            number_text.data(), number_text.data() + number_text.size(), result.number
+        );
 
-        const char* begin = number_text.data();
-        const char* end = begin + number_text.size();
-
-        const auto [ptr, ec] = std::from_chars(begin, end, result.number);
-
-        if (ec != std::errc{} || ptr != end) {
-            return error();
+        if (error != std::errc{} || end != number_text.data() + number_text.size()) {
+            return invalidName();
         }
 
         return result;
     }
 
-    static std::expected<SensorNameComponent, std::string> take_index_from_component(std::string_view text) {
-        const auto error = [&] {
-            return std::unexpected{"Invalid sensor name: " + std::string{text}};
-        };
-
+    [[nodiscard]] static std::expected<SensorNameComponent, std::string> parseComponent(std::string_view text) {
         if (text.size() < 3) {
-            return error();
+            return std::unexpected{"Invalid sensor name: " + std::string{text}};
         }
 
         switch (text.back()) {
-            case 'R':
-                return SensorNameComponent::R;
-            case 'F':
-                return SensorNameComponent::F;
-            case 'Z':
-                return SensorNameComponent::Z;
-            default:
-                return error();
+            case 'R': return SensorNameComponent::R;
+            case 'F': return SensorNameComponent::F;
+            case 'Z': return SensorNameComponent::Z;
+            default: return std::unexpected{"Invalid sensor name: " + std::string{text}};
         }
     }
 
     template <std::ranges::input_range Range>
         requires std::convertible_to<std::ranges::range_reference_t<Range>, std::string_view>
-    [[nodiscard]]
-    static std::expected<std::vector<SensorName>, std::string> parse_names_range(Range&& names) {
+    [[nodiscard]] static std::expected<std::vector<SensorName>, std::string> parseNames(Range&& names) {
         std::vector<SensorName> result;
-
         if constexpr (std::ranges::sized_range<Range>) {
             result.reserve(std::ranges::size(names));
         }
 
         for (const auto& text : names) {
-            auto parsed = parse_name(std::string_view{text});
-
+            auto parsed = parse(std::string_view{text});
             if (!parsed) {
                 return std::unexpected{parsed.error()};
             }
-
             result.push_back(*parsed);
         }
 
-        std::ranges::sort(result, [](const SensorName& lhs, const SensorName& rhs) {
-            if (lhs.id != rhs.id) {
-                return static_cast<char>(lhs.id) < static_cast<char>(rhs.id);
-            }
-
-            return lhs.number < rhs.number;
+        std::ranges::sort(result, {}, [](const SensorName& name) {
+            return std::pair{static_cast<char>(name.id), name.number};
         });
-
-        const auto duplicates = std::ranges::unique(result, [](const SensorName& lhs, const SensorName& rhs) {
-            return lhs.id == rhs.id && lhs.number == rhs.number;
+        const auto duplicates = std::ranges::unique(result, {}, [](const SensorName& name) {
+            return std::pair{static_cast<char>(name.id), name.number};
         });
-
         result.erase(duplicates.begin(), duplicates.end());
-
         return result;
     }
 };
@@ -153,100 +106,69 @@ struct Sensor {
     std::array<double, 3> position{};
     std::array<double, 3> values{};
 
-    void set_value(double value, SensorNameComponent component) noexcept {
-        values[name.component_index(component)] = value;
+    void setValue(double value, SensorNameComponent component) noexcept {
+        values[static_cast<std::size_t>(component)] = value;
+    }
+
+    [[nodiscard]] double value(SensorNameComponent component) const noexcept {
+        return values[static_cast<std::size_t>(component)];
+    }
+
+    [[nodiscard]] double coordinate(SensorCoordinate coordinate) const noexcept {
+        return position[static_cast<std::size_t>(coordinate)];
     }
 };
 
-class TpcDataModel {
+/** Calculation-oriented snapshot of configured sensors and latest readings. */
+class TpcDataModel final {
 public:
-    using DiscoveryResult = tpc::system::models::DiscoveryResult;
-
     using ReceivedFrame = std::unordered_map<std::string, double>;
 
-    [[nodiscard]]
-    const DiscoveryResult& discovery_result() const noexcept {
-        return discovery_result_;
-    }
+    [[nodiscard]] std::span<const Sensor> sensors() const noexcept { return sensors_; }
+    [[nodiscard]] std::array<std::size_t, 3> grid() const noexcept { return grid_; }
+    [[nodiscard]] double length() const noexcept { return length_; }
+    [[nodiscard]] double radius() const noexcept { return radius_; }
 
-    void set_discovery_result(DiscoveryResult result) {
-        discovery_result_ = std::move(result);
-    }
-
-    [[nodiscard]]
-    std::span<const Sensor> sensors() const noexcept {
-        return sensors_;
-    }
-
-    std::array<size_t, 3> grid() const noexcept {
-        return grid_;
-    }
-    double length() const noexcept {
-        return length_;
-    }
-
-    double radius() const noexcept {
-        return radius_;
-    }
-
-    void set_sensors(std::vector<Sensor> sensors) {
+    void setSensors(std::vector<Sensor> sensors) {
         sensors_ = std::move(sensors);
-        apply_received_frame();
+        applyReceivedFrame();
     }
 
-    void set_received_frame(ReceivedFrame frame) {
+    void setReceivedFrame(ReceivedFrame frame) {
         received_frame_ = std::move(frame);
-        apply_received_frame();
+        applyReceivedFrame();
     }
 
-    void set_grid(std::array<size_t, 3> grid) {
-        grid_ = std::move(grid);
-    }
+    void setGrid(std::array<std::size_t, 3> grid) noexcept { grid_ = grid; }
 
-    void set_length(double length) {
+    void setGeometry(double length, double radius) noexcept {
         length_ = length;
-    }
-
-    void set_radius(double radius) {
         radius_ = radius;
     }
 
-    void clear() noexcept {
-        discovery_result_ = {};
-        received_frame_.clear();
-        sensors_.clear();
-    }
-
 private:
-    void apply_received_frame() {
+    void applyReceivedFrame() {
         for (const auto& [text_name, value] : received_frame_) {
-            auto name = SensorName::parse_name(text_name);
-            auto component = SensorName::take_index_from_component(text_name);
-
+            const auto name = SensorName::parse(text_name);
+            const auto component = SensorName::parseComponent(text_name);
             if (!name || !component) {
                 continue;
             }
 
-            const auto iterator = std::ranges::find_if(sensors_, [&name](const Sensor& sensor) {
-                return sensor.name.id == name->id && sensor.name.number == name->number;
+            const auto sensor = std::ranges::find_if(sensors_, [&name](const Sensor& candidate) {
+                return candidate.name.id == name->id && candidate.name.number == name->number;
             });
-
-            if (iterator == sensors_.end()) {
-                continue;
+            if (sensor != sensors_.end()) {
+                sensor->setValue(value, *component);
             }
-
-            iterator->set_value(value, *component);
         }
     }
 
-    DiscoveryResult discovery_result_{};
-    ReceivedFrame received_frame_{};
-    std::vector<Sensor> sensors_{};
-    std::array<size_t,3> grid_{};
-
+    ReceivedFrame received_frame_;
+    std::vector<Sensor> sensors_;
+    std::array<std::size_t, 3> grid_{};
     double length_{};
     double radius_{};
-
 };
 
 }  // namespace tpc_qt::models

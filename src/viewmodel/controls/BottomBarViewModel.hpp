@@ -1,62 +1,55 @@
 #pragma once
+
 #include <QObject>
 #include <QString>
-#include <QtQmlIntegration>
-#include <mutex>
 
 #include "models/ui/tabs_indexing_model.hpp"
+#include "services/scoped_subscription.hpp"
 
-namespace tpc::system::client {
-enum class ConnectionState : int;
+namespace tpc_qt::services {
+class EventDispatcher;
+class SettingsHolderService;
+class TpcService;
 }
 
 namespace tpc_qt::view_models {
 
-    class BottomBarViewModel : public QObject {
-        Q_OBJECT
+/** Connection state and navigation commands displayed in the bottom bar. */
+class BottomBarViewModel final : public QObject {
+    Q_OBJECT
 
-        Q_PROPERTY(bool isConnected READ get_isConnected NOTIFY isConnectedChanged)
-        Q_PROPERTY(QString switch_tab_button_name READ get_switch_tab_button_name NOTIFY switchTabButtonNameChanged)
+    Q_PROPERTY(bool isConnected READ isConnected NOTIFY isConnectedChanged)
+    Q_PROPERTY(QString switchTabButtonName READ switchTabButtonName NOTIFY switchTabButtonNameChanged)
 
-    public:
-        explicit BottomBarViewModel(
-            QObject *parent,
-            models::ui::TabsIndexingModel target_tab);
+public:
+    explicit BottomBarViewModel(
+        models::ui::TabsIndexingModel current_tab,
+        services::EventDispatcher& events,
+        services::SettingsHolderService& settings,
+        services::TpcService& tpc,
+        QObject* parent = nullptr
+    );
 
-    public:
+    [[nodiscard]] bool isConnected() const noexcept { return is_connected_; }
+    [[nodiscard]] QString switchTabButtonName() const;
 
-        bool get_isConnected() const noexcept;
+    Q_INVOKABLE void connectToTpc();
+    Q_INVOKABLE void disconnectFromTpc();
+    Q_INVOKABLE void toggleTab();
 
-        QString get_endpoint() const;
-        void set_endpoint(const QString &endpoint);
+Q_SIGNALS:
+    void isConnectedChanged();
+    void switchTabButtonNameChanged();
 
-        QString get_switch_tab_button_name() const;
-        void set_switch_tab_button_name();
+private:
+    void onConnectionStateChanged(bool connected);
 
-    public:
-        Q_INVOKABLE void connection_command();
+    services::EventDispatcher& events_;
+    services::SettingsHolderService& settings_;
+    services::TpcService& tpc_;
+    models::ui::TabsIndexingModel current_tab_;
+    bool is_connected_{false};
+    services::ScopedSubscription<bool> connection_subscription_;
+};
 
-        Q_INVOKABLE void disconnection_command();
-
-        Q_INVOKABLE void switch_tab_command();
-
-    Q_SIGNALS:
-        void isConnectedChanged();
-
-        void switchTabButtonNameChanged();
-
-    private:
-        auto on_connection_state_changed(tpc::system::client::ConnectionState) -> void;
-
-    private:
-        models::ui::TabsIndexingModel current_tab_;
-
-        std::mutex mutex_{};
-
-        bool connection_state_{false};
-
-        bool is_connected_{false};
-
-        QString switch_tab_button_name_{};
-    };
-}
+}  // namespace tpc_qt::view_models

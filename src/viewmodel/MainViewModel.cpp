@@ -1,21 +1,34 @@
 #include "MainViewModel.hpp"
 
-#include <QObject>
-
 #include "services/event_dispatcher/event_dispatcher.hpp"
 
 namespace tpc_qt::view_models {
 
-    MainViewModel::MainViewModel(QObject *parent) : QObject(parent)
-        , workspace_(new WorkspaceViewModel(this))
-        , bottom_bar_(new BottomBarViewModel(this, models::ui::TabsIndexingModel::Workspace))
-        , settings_(new SettingsViewModel(this)) {
-        {
-            services::EventDispatcher::instance().tab_change_requested.subscribe(
-                [this](models::ui::TabsIndexingModel target_tab) {
-                    on_tab_change_requested(target_tab);
-                }
-            );
-        }
-    }
+MainViewModel::MainViewModel(
+    services::EventDispatcher& events,
+    services::SettingsHolderService& settings,
+    services::TpcService& tpc,
+    services::FieldSliceService& field_slices,
+    QObject* parent
+)
+    : QObject(parent),
+      workspace_(events, tpc),
+      bottom_bar_(models::ui::TabsIndexingModel::Workspace, events, settings, tpc),
+      settings_(events, settings),
+      field_visualization_(field_slices) {
+    tab_subscription_.subscribe(
+        events.tab_change_requested,
+        [this](models::ui::TabsIndexingModel target_tab) { onTabChangeRequested(target_tab); }
+    );
 }
+
+void MainViewModel::onTabChangeRequested(models::ui::TabsIndexingModel target_tab) {
+    if (current_tab_ == target_tab) {
+        return;
+    }
+
+    current_tab_ = target_tab;
+    Q_EMIT currentTabIndexChanged();
+}
+
+}  // namespace tpc_qt::view_models

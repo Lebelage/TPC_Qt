@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -7,6 +9,33 @@ import "../styles"
 Item {
     id: root
     required property var dataContext
+    signal visualizationRequested()
+
+    readonly property int sensorColumnWidth: 140
+    readonly property int numericColumnWidth: 110
+
+    component HeaderCell: Text {
+        Layout.minimumWidth: root.numericColumnWidth
+        Layout.preferredWidth: root.numericColumnWidth
+        Layout.maximumWidth: root.numericColumnWidth
+        color: "#a9b7c6"
+        font.bold: true
+        font.pixelSize: 12
+        horizontalAlignment: Text.AlignHCenter
+    }
+
+    component NumericCell: Text {
+        required property real numericValue
+        property color valueColor: "#a9b7c6"
+
+        Layout.minimumWidth: root.numericColumnWidth
+        Layout.preferredWidth: root.numericColumnWidth
+        Layout.maximumWidth: root.numericColumnWidth
+        text: Number(numericValue).toFixed(3)
+        color: valueColor
+        font.family: "monospace"
+        horizontalAlignment: Text.AlignHCenter
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -14,7 +43,7 @@ Item {
 
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: 36
+            implicitHeight: 58
             color: "#18191a"
             border.color: "#3e4246"
 
@@ -24,26 +53,64 @@ Item {
                 spacing: 12
 
                 Text {
-                    Layout.preferredWidth: 220
-                    text: "Sensor Name"
-                    color: "#a9b7c6"
-                    font.bold: true
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: "Value"
-                    color: "#a9b7c6"
-                    font.bold: true
-                }
-
-                Text {
-                    Layout.preferredWidth: 100
-                    text: "Actions"
+                    Layout.minimumWidth: root.sensorColumnWidth
+                    Layout.preferredWidth: root.sensorColumnWidth
+                    Layout.maximumWidth: root.sensorColumnWidth
+                    text: "Sensor"
                     color: "#a9b7c6"
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
                 }
+
+                ColumnLayout {
+                    Layout.minimumWidth: root.numericColumnWidth * 3
+                    Layout.preferredWidth: root.numericColumnWidth * 3
+                    Layout.maximumWidth: root.numericColumnWidth * 3
+                    spacing: 2
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Components"
+                        color: "#7f8b99"
+                        font.pixelSize: 11
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        HeaderCell { text: "R" }
+                        HeaderCell { text: "F" }
+                        HeaderCell { text: "Z" }
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.minimumWidth: root.numericColumnWidth * 3
+                    Layout.preferredWidth: root.numericColumnWidth * 3
+                    Layout.maximumWidth: root.numericColumnWidth * 3
+                    spacing: 2
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Coordinates"
+                        color: "#7f8b99"
+                        font.pixelSize: 11
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        HeaderCell { text: "X" }
+                        HeaderCell { text: "Y" }
+                        HeaderCell { text: "Z" }
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
             }
         }
 
@@ -53,13 +120,23 @@ Item {
             Layout.fillHeight: true
             clip: true
 
-            model: root.dataContext ? root.dataContext.sensors_model : null
+            model: root.dataContext ? root.dataContext.sensorsModel : null
 
             delegate: Rectangle {
-                width: listView.width
+                id: sensorRow
+                required property int index
+                required property string sensorName
+                required property double componentR
+                required property double componentF
+                required property double componentZ
+                required property double coordinateX
+                required property double coordinateY
+                required property double coordinateZ
+
+                width: ListView.view.width
                 height: 48
                 border.color: "#3e4246"
-                color: "#1e1f22"
+                color: sensorRow.index % 2 === 0 ? "#1e1f22" : "#202226"
 
                 RowLayout {
                     anchors.fill: parent
@@ -67,17 +144,48 @@ Item {
                     spacing: 12
 
                     Text {
-                        Layout.preferredWidth: 220
-                        text: sensorName
+                        Layout.minimumWidth: root.sensorColumnWidth
+                        Layout.preferredWidth: root.sensorColumnWidth
+                        Layout.maximumWidth: root.sensorColumnWidth
+                        text: sensorRow.sensorName
                         color: "white"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
                         elide: Text.ElideRight
                     }
 
-                    Text {
-                        Layout.fillWidth: true
-                        text: sensorValue
-                        color: "#499c54"
+                    RowLayout {
+                        Layout.minimumWidth: root.numericColumnWidth * 3
+                        Layout.preferredWidth: root.numericColumnWidth * 3
+                        Layout.maximumWidth: root.numericColumnWidth * 3
+                        spacing: 0
+
+                        NumericCell {
+                            numericValue: sensorRow.componentR
+                            valueColor: "#56a8f5"
+                        }
+                        NumericCell {
+                            numericValue: sensorRow.componentF
+                            valueColor: "#56a8f5"
+                        }
+                        NumericCell {
+                            numericValue: sensorRow.componentZ
+                            valueColor: "#56a8f5"
+                        }
                     }
+
+                    RowLayout {
+                        Layout.minimumWidth: root.numericColumnWidth * 3
+                        Layout.preferredWidth: root.numericColumnWidth * 3
+                        Layout.maximumWidth: root.numericColumnWidth * 3
+                        spacing: 0
+
+                        NumericCell { numericValue: sensorRow.coordinateX }
+                        NumericCell { numericValue: sensorRow.coordinateY }
+                        NumericCell { numericValue: sensorRow.coordinateZ }
+                    }
+
+                    Item { Layout.fillWidth: true }
                 }
             }
         }
@@ -97,27 +205,19 @@ Item {
                     Layout.fillWidth: true
                 }
 
-                // StyledButton {
-                //     text: "Visualize"
-                //     cornerRadius: 8
-                //     onClicked: {
-                //         root.dataContext.try_get_frame_command();
-                //     }
-                // }
-
                 StyledButton {
-                    text: "Save as ..."
+                    text: "Visualize field"
                     cornerRadius: 8
-                    onClicked: {
-                        root.dataContext.save_filed_vtk_as();
-                    }
+                    enabled: root.dataContext && root.dataContext.fieldCalculated
+                    onClicked: root.visualizationRequested()
                 }
 
                 StyledButton {
-                    text: "Save"
+                    text: "Save VTK"
                     cornerRadius: 8
+                    enabled: root.dataContext && root.dataContext.fieldCalculated
                     onClicked: {
-                        root.dataContext.save_filed_vtk_as();
+                        root.dataContext.saveFieldAsVtk();
                     }
                 }
 
@@ -125,19 +225,9 @@ Item {
                     text: "Calculate field"
                     cornerRadius: 8
                     onClicked: {
-                        root.dataContext.calculate_field_command();
+                        root.dataContext.calculateField();
                     }
                 }
-
-                StyledButton {
-                    text: "Refresh Data"
-                    cornerRadius: 8
-                    onClicked: {
-                        root.dataContext.get_frame_command();
-                    }
-                }
-
-
             }
         }
     }

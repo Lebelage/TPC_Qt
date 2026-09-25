@@ -1,40 +1,58 @@
 #pragma once
 #include <QObject>
-#include <QtQmlIntegration>
 
-#include "../../models/tables/sensors_table_model.hpp"
+#include "models/application_settings_model.hpp"
+#include "models/tables/sensors_table_model.hpp"
+#include "services/scoped_subscription.hpp"
 
-namespace tpc::system::models {
-struct DiscoveryResult;
+namespace tpc_qt::services {
+class EventDispatcher;
+class TpcService;
 }
 
 namespace tpc_qt::view_models {
-    class WorkspaceViewModel : public QObject {
-        Q_OBJECT
+/** Exposes live sensor values and field-calculation commands to QML. */
+class WorkspaceViewModel final : public QObject {
+    Q_OBJECT
 
-        Q_PROPERTY(QAbstractItemModel* sensors_model READ get_sensors_model CONSTANT)
+    Q_PROPERTY(QAbstractItemModel* sensorsModel READ sensorsModel CONSTANT)
+    Q_PROPERTY(QString fieldCalculationInfoStatus READ fieldCalculationInfoStatus NOTIFY fieldCalculationInfoStatusChanged)
+    Q_PROPERTY(bool fieldCalculated READ fieldCalculated NOTIFY fieldCalculatedChanged)
 
-    public:
-        explicit WorkspaceViewModel(QObject *parent = nullptr);
+public:
+    WorkspaceViewModel(
+        services::EventDispatcher& events,
+        services::TpcService& tpc,
+        QObject* parent = nullptr
+    );
 
-    public:
-        QAbstractItemModel *get_sensors_model() noexcept;
+    [[nodiscard]] QAbstractItemModel* sensorsModel() noexcept;
 
-        tpc_qt::models::SensorsTableModel &model() noexcept { return sensors_model_; }
+    [[nodiscard]] QString fieldCalculationInfoStatus() const noexcept;
+    [[nodiscard]] bool fieldCalculated() const noexcept;
+    void setFieldCalculationInfoStatus(bool status) noexcept;
 
-    public:
-        Q_INVOKABLE void get_frame_command();
-        Q_INVOKABLE void calculate_field_command();
-        Q_INVOKABLE void save_filed_vtk_as();
-        Q_INVOKABLE void save_filed_vtk();
+    Q_INVOKABLE void calculateField();
+    Q_INVOKABLE void saveFieldAsVtk();
 
-    private:
-        void initialize(tpc::system::models::DiscoveryResult);
+Q_SIGNALS:
+    void fieldCalculationInfoStatusChanged();
+    void fieldCalculatedChanged();
 
-    private:
-       void on_data_initialization_data_received(tpc::system::models::DiscoveryResult);
+private:
+    void onSettingsChanged(models::AppSettings settings);
+    void onFrameReceived(models::TpcDataModel::ReceivedFrame frame);
+    void onFieldWasCalculated(bool);
 
-    private:
-        tpc_qt::models::SensorsTableModel sensors_model_;
-    };
-}
+private:
+    services::TpcService& tpc_;
+    QString field_calculation_info_status_ = "Field is not calculated";
+    bool field_calculated_{false};
+    models::SensorsTableModel sensors_model_;
+
+    services::ScopedSubscription<const models::AppSettings&> settings_subscription_;
+    services::ScopedSubscription<const std::unordered_map<std::string, double>&> frame_subscription_;
+    services::ScopedSubscription<bool> field_was_calculated_;
+};
+
+}  // namespace tpc_qt::view_models

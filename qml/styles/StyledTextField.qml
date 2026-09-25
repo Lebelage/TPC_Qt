@@ -10,7 +10,7 @@ TextField {
     property color defaultBorderColor: "#3e4246"
     property color activeBorderColor: "#3574f0"
     property color customTextColor: "#dfdfe0"
-    property color placeholderColor: "#6c707e" // Переименовано во избежание конфликта
+    property color placeholderColor: "#6c707e"
 
     font.pixelSize: 13
     color: control.customTextColor

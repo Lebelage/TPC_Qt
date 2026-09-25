@@ -314,7 +314,7 @@ Item {
 
                     onClicked: {
                         if (root.dataContext)
-                            root.dataContext.load_settings_command()
+                            root.dataContext.loadSettings()
                     }
                 }
 
@@ -328,7 +328,7 @@ Item {
 
                     onClicked: {
                         if (root.dataContext)
-                            root.dataContext.apply_settings_command()
+                            root.dataContext.applySettings()
                     }
                 }
             }

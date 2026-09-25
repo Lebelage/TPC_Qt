@@ -3,10 +3,11 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import "controls"
-import "styles"
 
 ApplicationWindow {
     id: root
+    required property var mainViewModel
+
     width: 1000
     height: 700
     visible: true
@@ -21,20 +22,26 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            currentIndex: mainViewModel.current_tab_index
+            currentIndex: root.mainViewModel.currentTabIndex
 
             Workspace {
-                dataContext: mainViewModel.workspace
+                dataContext: root.mainViewModel.workspace
+                onVisualizationRequested: fieldVisualizationWindow.show()
             }
             
             Settings {
-                dataContext: mainViewModel.settings
+                dataContext: root.mainViewModel.settings
             }
         }
 
         BottomBar {
             Layout.fillWidth: true
-            dataContext: mainViewModel.bottomBar
+            dataContext: root.mainViewModel.bottomBar
         }
+    }
+
+    FieldVisualization {
+        id: fieldVisualizationWindow
+        dataContext: root.mainViewModel.fieldVisualization
     }
 }

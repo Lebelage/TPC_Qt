@@ -1,195 +1,252 @@
 #include "services/settings_holder/settings_holder.hpp"
 
 #include <algorithm>
-#include <charconv>
-#include <expected>
-#include <iostream>
+#include <cmath>
+#include <exception>
+#include <iterator>
+#include <numbers>
+#include <ranges>
+#include <stdexcept>
+#include <string_view>
+#include <utility>
 
 #include "nlohmann/json.hpp"
 #include "services/event_dispatcher/event_dispatcher.hpp"
 #include "services/file_worker/file_worker.hpp"
 
 namespace tpc_qt::services {
-#pragma region Constructor/Destructor
-SettingsHolderService& SettingsHolderService::instance() {
-    static SettingsHolderService service;
-    return service;
-}
+namespace {
+constexpr std::string_view kDefaultEndpoint = "opc.tcp://127.0.0.1:1234";
+constexpr int kDefaultPollingIntervalMs = 1000;
+constexpr std::size_t kDefaultGridSize = 32;
+}  // namespace
 
-SettingsHolderService::SettingsHolderService() {
-    EventDispatcher::instance().initialization_data_received.subscribe(
-        [this](std::vector<SensorName> discovery_sensors_names) {
-            initialization_data_received(discovery_sensors_names);
-        }
+SettingsHolderService::SettingsHolderService(EventDispatcher& events, FileWorker& file_worker)
+    : events_(events), file_worker_(file_worker) {
+    initialization_subscription_.subscribe(
+        events_.initialization_data_received,
+        [this](std::vector<models::SensorName> names) { onInitializationDataReceived(std::move(names)); }
     );
-
-    load_settings();
 }
 
-SettingsHolderService::~SettingsHolderService() {}
+void SettingsHolderService::applySettings() {
+    models::AppSettings snapshot;
+    {
+        std::scoped_lock lock{mutex_};
+        snapshot = current_settings_;
+    }
 
-#pragma endregion
-
-#pragma region Public methods
-
-void SettingsHolderService::apply_settings() {
-    nlohmann::json j = current_settings_;
-
-    FileWorker::instance().write_settings(j.dump(4));
-
-    EventDispatcher::instance().settings_changed.invoke(current_settings_);
+    // Runtime settings remain usable even if persistence fails; publishing is
+    // intentionally independent from the best-effort disk write.
+    // Parentheses are intentional: brace initialization would select
+    // json::initializer_list and serialize the settings as a one-item array.
+    const nlohmann::json settings_json(snapshot);
+    (void)file_worker_.writeSettings(settings_json.dump(4));
+    events_.settings_changed.invoke(snapshot);
 }
 
-std::expected<void, std::string> SettingsHolderService::load_settings() {
+std::expected<void, std::string> SettingsHolderService::loadSettings() {
+    const auto loaded = file_worker_.loadSettings();
+    if (!loaded) {
+        {
+            std::scoped_lock lock{mutex_};
+            current_settings_ = defaultSettings();
+        }
+        applySettings();
+        return std::unexpected{loaded.error()};
+    }
+
     try {
-        auto result = FileWorker::instance().load_settings();
+        auto settings_json = nlohmann::json::parse(*loaded);
 
-        if (!result) {
-            current_settings_ = initialize_by_defaults();
-
-            apply_settings();
-
-            return std::unexpected(result.error());
+        // Migrate files written by the old json{settings} expression, which
+        // wrapped the settings object in a one-item JSON array.
+        if (settings_json.is_array() && settings_json.size() == 1 && settings_json.front().is_object()) {
+            auto object = settings_json.front();
+            settings_json = std::move(object);
+        }
+        if (!settings_json.is_object()) {
+            throw std::runtime_error{"Settings root must be a JSON object"};
         }
 
-        models::AppSettings deserialized = nlohmann::json::parse(result.value()).get<models::AppSettings>();
-
-        validate_and_confirm_settings(deserialized);
-
+        auto settings = settings_json.get<models::AppSettings>();
+        {
+            std::scoped_lock lock{mutex_};
+            validateAndStore(std::move(settings));
+        }
+        applySettings();
         return {};
-    } catch (...) {
-        return {};
+    } catch (const std::exception& error) {
+        {
+            std::scoped_lock lock{mutex_};
+            current_settings_ = defaultSettings();
+        }
+        applySettings();
+        return std::unexpected{error.what()};
     }
 }
 
-void SettingsHolderService::set_connection_parameters(ConnectionParameters connection_parameters) {
+void SettingsHolderService::setConnectionParameters(models::ConnectionParameters parameters) {
+    std::scoped_lock lock{mutex_};
     current_settings_.connection.endpoint =
-        connection_parameters.endpoint.empty() ? "opc.tcp://127.0.0.1:1234" : connection_parameters.endpoint;
+        parameters.endpoint.empty() ? std::string{kDefaultEndpoint} : std::move(parameters.endpoint);
     current_settings_.connection.polling_interval =
-        connection_parameters.polling_interval <= 0 ? 1000 : connection_parameters.polling_interval;
+        parameters.polling_interval > 0 ? parameters.polling_interval : kDefaultPollingIntervalMs;
 }
 
-void SettingsHolderService::set_geometry_parameters(TpcGeometryParams geometry_parameters) {
-    current_settings_.geometry.length = geometry_parameters.length <= 0 ? 10 : geometry_parameters.length;
-    current_settings_.geometry.radius = geometry_parameters.radius <= 0 ? 5 : geometry_parameters.radius;
+void SettingsHolderService::setGeometryParameters(models::TpcGeometryParams parameters) {
+    std::scoped_lock lock{mutex_};
+    current_settings_.geometry.length = parameters.length > 0.0 ? parameters.length : 10.0;
+    current_settings_.geometry.radius = parameters.radius > 0.0 ? parameters.radius : 5.0;
 }
 
-void SettingsHolderService::set_grid_parameters(std::array<size_t, 3> grid) {
-    constexpr size_t default_grid_size = 32;
+void SettingsHolderService::setGridParameters(std::array<std::size_t, 3> grid) {
     for (auto& dimension : grid) {
         if (dimension == 0) {
-            dimension = default_grid_size;
+            dimension = kDefaultGridSize;
         }
     }
+
+    std::scoped_lock lock{mutex_};
     current_settings_.grid = grid;
 }
 
-void SettingsHolderService::set_sensors_parameters(std::vector<SensorInfo> sensors_info) {
-    validate_sensors_parameters(sensors_info);
-}
-
-const models::AppSettings& SettingsHolderService::get_current_settings() const noexcept {
+models::AppSettings SettingsHolderService::currentSettings() const {
+    std::scoped_lock lock{mutex_};
     return current_settings_;
 }
 
-#pragma endregion
-
-#pragma region Private methods
-models::AppSettings SettingsHolderService::initialize_by_defaults() {
-    return models::AppSettings{
-        {                       228, 1337},
-        {"opc.tcp://127.0.0.1:1234", 1000},
-        {},
-        {32, 32, 32}
+models::AppSettings SettingsHolderService::defaultSettings() {
+    return {
+        .geometry = {10.0, 5.0},
+        .connection = {std::string{kDefaultEndpoint}, kDefaultPollingIntervalMs},
+        .sensors_info = {},
+        .grid = {kDefaultGridSize, kDefaultGridSize, kDefaultGridSize}
     };
 }
 
-void SettingsHolderService::validate_and_confirm_settings(models::AppSettings settings) {
-    current_settings_.connection.endpoint =
-        settings.connection.endpoint.empty() ? "opc.tcp://127.0.0.1:1234" : settings.connection.endpoint;
-    current_settings_.connection.polling_interval =
-        settings.connection.polling_interval <= 0 ? 1000 : settings.connection.polling_interval;
+void SettingsHolderService::setDefaultSensorPositions(
+    std::vector<models::SensorInfo>& sensors,
+    models::TpcGeometryParams geometry
+) {
+    const auto place_on_base = [&](models::SensorNameKey id, double z) {
+        const auto sensor_count = static_cast<std::size_t>(std::ranges::count(sensors, id, [](const auto& sensor) {
+            return sensor.name.id;
+        }));
+        if (sensor_count == 0) {
+            return;
+        }
 
-    current_settings_.geometry.length = settings.geometry.length <= 0 ? 10 : settings.geometry.length;
-    current_settings_.geometry.radius = settings.geometry.radius <= 0 ? 5 : settings.geometry.radius;
+        std::size_t index = 0;
+        for (auto& sensor : sensors) {
+            if (sensor.name.id != id) {
+                continue;
+            }
 
-    set_grid_parameters(settings.grid);
+            const double angle = 2.0 * std::numbers::pi * static_cast<double>(index)
+                / static_cast<double>(sensor_count);
+            sensor.x = static_cast<float>(geometry.radius * std::cos(angle));
+            sensor.y = static_cast<float>(geometry.radius * std::sin(angle));
+            sensor.z = static_cast<float>(z);
+            ++index;
+        }
+    };
 
-    validate_sensors_parameters(settings.sensors_info, true);
-
-    apply_settings();
+    const double half_length = geometry.length * 0.5;
+    place_on_base(models::SensorNameKey::E, half_length);
+    place_on_base(models::SensorNameKey::W, -half_length);
 }
 
-void SettingsHolderService::validate_sensors_parameters(std::vector<SensorInfo> sensors_info, bool replace_coordinates) {
-    std::vector<SensorInfo> validated_sensors_info{};
+void SettingsHolderService::validateAndStore(models::AppSettings settings) {
+    current_settings_.connection.endpoint = settings.connection.endpoint.empty()
+        ? std::string{kDefaultEndpoint}
+        : std::move(settings.connection.endpoint);
+    current_settings_.connection.polling_interval = settings.connection.polling_interval > 0
+        ? settings.connection.polling_interval
+        : kDefaultPollingIntervalMs;
+    current_settings_.geometry.length = settings.geometry.length > 0.0 ? settings.geometry.length : 10.0;
+    current_settings_.geometry.radius = settings.geometry.radius > 0.0 ? settings.geometry.radius : 5.0;
 
-    if (sensors_info.empty()) {
+    for (auto& dimension : settings.grid) {
+        if (dimension == 0) {
+            dimension = kDefaultGridSize;
+        }
+    }
+    current_settings_.grid = settings.grid;
+
+    // SensorName itself is not serialized. Reconstruct it from the persisted
+    // display name so consumers can use saved sensors before OPC discovery.
+    for (auto& sensor : settings.sensors_info) {
+        if (const auto name = models::SensorName::parse(sensor.previewable_name)) {
+            sensor.name = *name;
+        }
+    }
+    mergeSensors(settings.sensors_info, true);
+}
+
+void SettingsHolderService::mergeSensors(
+    const std::vector<models::SensorInfo>& sensors,
+    bool replace_coordinates
+) {
+    if (sensors.empty()) {
         return;
     }
 
     if (current_settings_.sensors_info.empty()) {
-        current_settings_.sensors_info = sensors_info;
+        current_settings_.sensors_info = sensors;
         return;
     }
 
-    for (const auto& sensor : sensors_info) {
-        auto it = std::find_if(
-            current_settings_.sensors_info.begin(),
-            current_settings_.sensors_info.end(),
-            [&sensor](const SensorInfo& current_sensor) {
-                return sensor.previewable_name == current_sensor.previewable_name;
-            }
+    std::vector<models::SensorInfo> merged;
+    merged.reserve(sensors.size());
+
+    for (const auto& sensor : sensors) {
+        const auto saved = std::ranges::find(
+            current_settings_.sensors_info, sensor.previewable_name, &models::SensorInfo::previewable_name
         );
 
-        if (it != current_settings_.sensors_info.end()) {
-            it->name = sensor.name;
-
-            if (replace_coordinates) {
-                it->x = sensor.x;
-                it->y = sensor.y;
-                it->z = sensor.z;
-            }
-
-            validated_sensors_info.push_back(*it);
-        } else {
-            validated_sensors_info.push_back(sensor);
+        if (saved == current_settings_.sensors_info.end()) {
+            merged.push_back(sensor);
+            continue;
         }
+
+        auto result = *saved;
+        result.name = replace_coordinates ? saved->name : sensor.name;
+        if (replace_coordinates) {
+            result.x = sensor.x;
+            result.y = sensor.y;
+            result.z = sensor.z;
+        }
+        merged.push_back(std::move(result));
     }
 
-    current_settings_.sensors_info = std::move(validated_sensors_info);
+    current_settings_.sensors_info = std::move(merged);
 }
-#pragma endregion
 
-#pragma region Private methods
-void SettingsHolderService::initialization_data_received(std::vector<SensorName> discovery_sensors_names) {
-    if (discovery_sensors_names.empty())
+void SettingsHolderService::onInitializationDataReceived(std::vector<models::SensorName> sensor_names) {
+    if (sensor_names.empty()) {
         return;
+    }
 
-    std::vector<SensorInfo> validated_sensors_info;
-    validated_sensors_info.reserve(discovery_sensors_names.size());
-
-    std::ranges::sort(discovery_sensors_names, {}, [](const SensorName& sensor) {
+    std::ranges::sort(sensor_names, {}, [](const models::SensorName& sensor) {
         return std::pair{static_cast<char>(sensor.id), sensor.number};
     });
 
-    std::vector<SensorInfo> sensors_info;
-    sensors_info.reserve(discovery_sensors_names.size());
-
-    std::ranges::transform(discovery_sensors_names, std::back_inserter(sensors_info), [](const SensorName& sensor) {
-        SensorInfo info;
-        info.set_name(sensor);
-        info.x = 0.0F;
-        info.y = 0.0F;
-        info.z = 0.0F;
+    std::vector<models::SensorInfo> sensors;
+    sensors.reserve(sensor_names.size());
+    std::ranges::transform(sensor_names, std::back_inserter(sensors), [](const models::SensorName& sensor) {
+        models::SensorInfo info;
+        info.setName(sensor);
         return info;
     });
 
-    load_settings();
+    {
+        std::scoped_lock lock{mutex_};
+        //setDefaultSensorPositions(sensors, current_settings_.geometry);
+        mergeSensors(sensors, false);
+    }
 
-    validate_sensors_parameters(sensors_info, false);
-
-    apply_settings();
+    applySettings();
 }
-#pragma endregion
 
 }  // namespace tpc_qt::services

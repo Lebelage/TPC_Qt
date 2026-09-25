@@ -1,37 +1,43 @@
 #include <QApplication>
+#include <QDebug>
+#include <QDir>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
 #include <QQuickStyle>
+#include <qqml.h>
+#include <QStandardPaths>
+#include <QVariant>
 
-#include "viewmodel/MainViewModel.hpp"
+#include <filesystem>
 
-#include "services/settings_holder/settings_holder.hpp"
-#include "services/tpc_service/tpc_service.hpp"
-#include "services/event_dispatcher/event_dispatcher.hpp"
-#include "services/file_worker/file_worker.hpp"
+#include "application/application_context.hpp"
+#include "view/FieldSliceItem.hpp"
 
-void register_services() {
-    tpc_qt::services::TpcService::instance();
-    tpc_qt::services::EventDispatcher::instance();
-    tpc_qt::services::SettingsHolderService::instance();
-    tpc_qt::services::FileWorker::instance();
+namespace {
+[[nodiscard]] std::filesystem::path toFilesystemPath(const QString& path) {
+#ifdef _WIN32
+    return std::filesystem::path{path.toStdWString()};
+#else
+    return std::filesystem::path{path.toStdString()};
+#endif
 }
-
-void unregister_services() {
-    tpc_qt::services::TpcService::instance().dispose();
-}
+}  // namespace
 
 int main(int argc, char *argv[]) {
     QQuickStyle::setStyle("Basic");
     QApplication app(argc, argv);
+    qmlRegisterType<tpc_qt::views::FieldSliceItem>("TPC.Native", 1, 0, "FieldSliceItem");
+    QCoreApplication::setOrganizationName("TPC");
+    QCoreApplication::setApplicationName("TPC_Qt");
 
-    [[maybe_unused]] auto &service = tpc_qt::services::TpcService::instance();
+    const QDir settings_directory{QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)};
+    const auto settings_path = toFilesystemPath(settings_directory.filePath("settings.json"));
+    const auto legacy_settings_path = std::filesystem::current_path() / "Settings" / "settings.json";
 
-    tpc_qt::view_models::MainViewModel view_model;
+    tpc_qt::application::ApplicationContext context{settings_path, legacy_settings_path};
+    auto& view_model = context.mainViewModel();
 
     QQmlApplicationEngine engine;
-
-    engine.rootContext()->setContextProperty("mainViewModel", &view_model);
+    engine.setInitialProperties({{"mainViewModel", QVariant::fromValue(&view_model)}});
 
     QObject::connect(
         &engine,
@@ -43,11 +49,11 @@ int main(int argc, char *argv[]) {
 
     engine.loadFromModule("TPC", "Main");
 
-    register_services();
+    // Publish initial settings only after every service and view model has
+    // subscribed to the application event stream.
+    if (const auto initialized = context.initialize(); !initialized) {
+        qWarning().noquote() << "Settings were reset to defaults:" << QString::fromStdString(initialized.error());
+    }
 
-    app.exec();
-
-    unregister_services();
-
-    return 0;
+    return app.exec();
 }
