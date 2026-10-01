@@ -10,7 +10,12 @@ include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(TPC_QT_EXPORT_COMPILE_COMMANDS "Generate compile_commands.json" ON)
+option(TPC_QT_COMPACT_RELEASE "Optimize Release builds for minimum size" OFF)
+set(TPC_QT_OUTPUT_DIR "" CACHE PATH "Directory for the built application")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS "${TPC_QT_EXPORT_COMPILE_COMMANDS}")
 
 find_package(Qt6 REQUIRED COMPONENTS
         Core
@@ -97,6 +102,45 @@ qt_add_executable(TPC_Qt
 set_target_properties(TPC_Qt PROPERTIES
         CXX_SCAN_FOR_MODULES OFF
 )
+
+if(TPC_QT_OUTPUT_DIR)
+    set_target_properties(TPC_Qt PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${TPC_QT_OUTPUT_DIR}"
+    )
+endif()
+
+if(TPC_QT_COMPACT_RELEASE)
+    set_property(TARGET TPC_Qt PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+
+    if(MSVC)
+        target_compile_options(TPC_Qt PRIVATE
+                $<$<CONFIG:Release>:/O1>
+                $<$<CONFIG:Release>:/Gy>
+        )
+        target_link_options(TPC_Qt PRIVATE
+                $<$<CONFIG:Release>:/OPT:REF>
+                $<$<CONFIG:Release>:/OPT:ICF>
+        )
+    else()
+        target_compile_options(TPC_Qt PRIVATE
+                $<$<CONFIG:Release>:-Os>
+                $<$<CONFIG:Release>:-ffunction-sections>
+                $<$<CONFIG:Release>:-fdata-sections>
+        )
+
+        if(APPLE)
+            target_link_options(TPC_Qt PRIVATE
+                    $<$<CONFIG:Release>:-Wl,-dead_strip>
+                    $<$<CONFIG:Release>:-Wl,-x>
+            )
+        else()
+            target_link_options(TPC_Qt PRIVATE
+                    $<$<CONFIG:Release>:-Wl,--gc-sections>
+                    $<$<CONFIG:Release>:-Wl,--strip-all>
+            )
+        endif()
+    endif()
+endif()
 
 # ============================================================
 # QML module
@@ -199,11 +243,11 @@ if(WIN32)
         # Добавляем команду, которая выполнится СРАЗУ после компиляции TPC_Qt
         add_custom_command(TARGET TPC_Qt POST_BUILD
             COMMAND "${WINDEPLOYQT_EXECUTABLE}"
-                    --debug
+                    "$<$<CONFIG:Debug>:--debug>$<$<NOT:$<CONFIG:Debug>>:--release>"
+                    --no-translations
                     --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
                     "$<TARGET_FILE:TPC_Qt>"
             COMMENT "Running windeployqt to copy Qt DLLs and QML plugins..."
         )
     endif()
 endif()
-
