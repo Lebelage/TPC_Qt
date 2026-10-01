@@ -13,6 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(TPC_QT_EXPORT_COMPILE_COMMANDS "Generate compile_commands.json" ON)
 option(TPC_QT_COMPACT_RELEASE "Optimize Release builds for minimum size" OFF)
+option(TPC_QT_DEPLOY_RUNTIME "Copy the Qt runtime next to the Windows executable" OFF)
 set(TPC_QT_OUTPUT_DIR "" CACHE PATH "Directory for the built application")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS "${TPC_QT_EXPORT_COMPILE_COMMANDS}")
@@ -189,6 +190,17 @@ target_link_libraries(TPC_Qt
         nlohmann_json::nlohmann_json
 )
 
+# Keep the final link self-contained on Windows. TPC::TPC already exposes these
+# dependencies transitively, but explicitly listing the imported targets avoids
+# MSVC dropping them when TPC is consumed through its interface/static targets.
+if(TARGET open62541pp::open62541pp)
+    target_link_libraries(TPC_Qt PRIVATE open62541pp::open62541pp)
+endif()
+
+if(TARGET open62541::open62541)
+    target_link_libraries(TPC_Qt PRIVATE open62541::open62541)
+endif()
+
 # ============================================================
 # macOS
 # ============================================================
@@ -198,8 +210,13 @@ set_target_properties(TPC_Qt PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER "org.tpc.controller"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
-        WIN32_EXECUTABLE TRUE
 )
+
+# Use the program's regular main() entry point. This also avoids depending on
+# Qt's optional WinMain adapter, which is not present in every Windows Qt kit.
+if(WIN32)
+    set_target_properties(TPC_Qt PROPERTIES WIN32_EXECUTABLE FALSE)
+endif()
 
 # ============================================================
 # MSVC
@@ -233,7 +250,7 @@ install(SCRIPT "${qt_deploy_script}")
 # ============================================================
 # Автоматический деплой DLL в папку сборки (Windows-only)
 # ============================================================
-if(WIN32)
+if(WIN32 AND TPC_QT_DEPLOY_RUNTIME)
     # Определяем, где лежит windeployqt, на основе пути к Qt6::Core
     get_target_property(_qt_core_location Qt6::Core LOCATION)
     get_filename_component(_qt_bin_dir "${_qt_core_location}" DIRECTORY)
