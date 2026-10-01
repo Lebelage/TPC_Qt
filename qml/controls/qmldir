@@ -1,0 +1,5 @@
+module TPC.controls
+BottomBar 1.0 BottomBar.qml
+FieldVisualization 1.0 FieldVisualization.qml
+Settings 1.0 Settings.qml
+Workspace 1.0 Workspace.qml

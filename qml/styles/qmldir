@@ -1,0 +1,3 @@
+module TPC.styles
+StyledButton 1.0 StyledButton.qml
+StyledTextField 1.0 StyledTextField.qml

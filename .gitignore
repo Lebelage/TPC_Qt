@@ -3,6 +3,7 @@
 .build/
 out/
 build/
+dist/
 subprojects/*
 !subprojects/*.wrap
 !subprojects/packagefiles/

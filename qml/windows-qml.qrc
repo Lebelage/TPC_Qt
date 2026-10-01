@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/qt/qml/TPC">
+        <file alias="qmldir">qmldir</file>
+        <file alias="Main.qml">Main.qml</file>
+    </qresource>
+    <qresource prefix="/qt/qml/TPC/controls">
+        <file alias="qmldir">controls/qmldir</file>
+        <file alias="BottomBar.qml">controls/BottomBar.qml</file>
+        <file alias="FieldVisualization.qml">controls/FieldVisualization.qml</file>
+        <file alias="Settings.qml">controls/Settings.qml</file>
+        <file alias="Workspace.qml">controls/Workspace.qml</file>
+    </qresource>
+    <qresource prefix="/qt/qml/TPC/styles">
+        <file alias="qmldir">styles/qmldir</file>
+        <file alias="StyledButton.qml">styles/StyledButton.qml</file>
+        <file alias="StyledTextField.qml">styles/StyledTextField.qml</file>
+    </qresource>
+</RCC>

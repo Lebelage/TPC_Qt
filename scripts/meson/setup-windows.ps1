@@ -1,6 +1,8 @@
 param(
     [ValidateSet("x86_64", "arm64")]
-    [string]$Architecture = "x86_64"
+    [string]$Architecture = "x86_64",
+    [ValidateSet("release", "debug")]
+    [string]$BuildType = "release"
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,11 +22,11 @@ $VcpkgRoot = if ($env:VCPKG_ROOT) {
 
 $Triplet = if ($Architecture -eq "arm64") { "arm64-windows" } else { "x64-windows" }
 $CrossTemplate = Join-Path $ProjectDir "meson\cross\windows-$Architecture.ini"
-$BuildDir = Join-Path $ProjectDir ".build\meson-windows-$Architecture-release"
+$BuildDir = Join-Path $ProjectDir ".build\meson-windows-$Architecture-$BuildType"
 $InstallRoot = Join-Path $ProjectDir ".build\meson-vcpkg\$Triplet"
 $DependencyPrefix = Join-Path $InstallRoot $Triplet
 $MachineDir = Join-Path $ProjectDir ".build\meson-machines"
-$CrossFile = Join-Path $MachineDir "windows-$Architecture.ini"
+$CrossFile = Join-Path $MachineDir "windows-$Architecture-$BuildType.ini"
 $Manifest = Get-Content -Raw (Join-Path $ProjectDir "vcpkg.json") | ConvertFrom-Json
 $VcpkgPackages = @($Manifest.dependencies | ForEach-Object {
     if ($_ -is [string]) { $_ } else { $_.name }
@@ -64,15 +66,25 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $env:Path = "$(Join-Path $QtRoot 'bin');$env:Path"
 
+$BuildOptions = if ($BuildType -eq "debug") {
+    @("--buildtype=debug", "-Db_lto=false", "-Db_vscrt=mdd")
+} else {
+    @("--buildtype=release", "-Doptimization=s", "-Db_lto=true", "-Db_vscrt=md")
+}
+
+$SetupOptions = @()
+if (Test-Path (Join-Path $BuildDir "meson-private\coredata.dat")) { $SetupOptions += "--reconfigure" }
 meson setup `
     $BuildDir `
     $ProjectDir `
     "--cross-file=$CrossFile" `
     "--cmake-prefix-path=$DependencyPrefix" `
-    --wipe
+    @BuildOptions `
+    @SetupOptions
 
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Configured: $BuildDir"
 Write-Host "Build with: meson compile -C `"$BuildDir`""
 Write-Host "Deploy with: meson compile -C `"$BuildDir`" deploy"
+if ($BuildType -eq "release") { Write-Host "Package with: meson compile -C `"$BuildDir`" package" }

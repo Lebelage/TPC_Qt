@@ -116,16 +116,23 @@ tpc_qt = executable(
 if host_machine.system() == 'windows'
   windeployqt = find_program('windeployqt', required: false)
   if windeployqt.found()
+    fs = import('fs')
+    powershell = find_program('powershell.exe')
+    deploy_windows = files('scripts/meson/deploy-windows.ps1')
+    deploy_command = [
+      powershell, '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+      '-File', deploy_windows,
+      '-BuildDir', meson.project_build_root(),
+      '-QtRoot', fs.parent(fs.parent(windeployqt.full_path())),
+    ]
     run_target(
       'deploy',
-      command: [
-        windeployqt,
-        '--release',
-        '--no-translations',
-        '--qmldir', meson.project_source_root() / 'qml',
-        tpc_qt,
-      ],
+      command: deploy_command,
+      depends: tpc_qt,
     )
+    if get_option('buildtype') == 'release'
+      run_target('package', command: deploy_command + ['-Package', '-Archive'], depends: tpc_qt)
+    endif
   endif
 elif host_machine.system() == 'darwin'
   macdeployqt = find_program('macdeployqt', required: false)
@@ -149,7 +156,9 @@ elif host_machine.system() == 'darwin'
         meson.project_build_root() / 'TPC_Qt.app',
         meson.project_source_root() / 'qml',
         macdeployqt,
+        get_option('buildtype'),
       ],
+      depends: tpc_qt,
     )
   endif
 endif

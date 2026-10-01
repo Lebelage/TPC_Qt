@@ -1,5 +1,11 @@
 tpc_qml_module = []
 
+if host_machine.system() == 'windows'
+  # Meson 1.12 generates backslashes in QML resource URLs on Windows.
+  # Explicit QRC paths keep module lookup and relative imports portable.
+  tpc_qml_module = qt6.compile_resources(sources: files('windows-qml.qrc'))
+else
+
 tpc_qml_module += qt6.qml_module(
   'TPC',
   version: '1.0',
@@ -31,3 +37,4 @@ tpc_qml_module += qt6.qml_module(
   dependencies: qt6_dep,
   include_directories: project_inc,
 )
+endif
