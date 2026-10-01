@@ -155,52 +155,129 @@ Window {
             }
         }
 
-        RowLayout {
+        ColumnLayout {
             Layout.fillWidth: true
-            spacing: 12
+            spacing: 6
 
-            Label {
-                text: "1"
-                color: "#a9b7c6"
-            }
-
-            Slider {
-                id: sliceSlider
+            RowLayout {
                 Layout.fillWidth: true
-                from: 0
-                to: Math.max(0, root.dataContext.sliceCount - 1)
-                stepSize: 1
-                snapMode: Slider.SnapAlways
-                value: root.dataContext.sliceIndex
-                enabled: root.dataContext.sliceCount > 1
-                onMoved: root.dataContext.setSliceIndex(Math.round(value))
-            }
+                spacing: 12
 
-            Label {
-                text: Math.max(1, root.dataContext.sliceCount).toString()
-                color: "#a9b7c6"
-            }
+                Label {
+                    text: Number(root.dataContext.minimumPosition).toPrecision(4)
+                    color: "#a9b7c6"
+                    font.family: "monospace"
+                }
 
-            Rectangle {
-                Layout.preferredWidth: 170
-                implicitHeight: 14
-                radius: 3
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: "#440154" }
-                    GradientStop { position: 0.2; color: "#414487" }
-                    GradientStop { position: 0.4; color: "#2a788e" }
-                    GradientStop { position: 0.6; color: "#22a884" }
-                    GradientStop { position: 0.8; color: "#7ad151" }
-                    GradientStop { position: 1.0; color: "#fde725" }
+                Slider {
+                    id: sliceSlider
+                    Layout.fillWidth: true
+                    from: root.dataContext.minimumPosition
+                    to: root.dataContext.maximumPosition
+                    stepSize: root.dataContext.positionStep
+                    snapMode: Slider.SnapAlways
+                    value: root.dataContext.slicePosition
+                    enabled: root.dataContext.available && to > from
+                    onMoved: root.dataContext.setSlicePosition(value)
+                }
+
+                Label {
+                    text: Number(root.dataContext.maximumPosition).toPrecision(4) + " cm"
+                    color: "#a9b7c6"
+                    font.family: "monospace"
+                }
+
+                StyledTextField {
+                    id: positionField
+                    Layout.preferredWidth: 112
+                    enabled: root.dataContext.available
+                    text: Number(root.dataContext.slicePosition).toFixed(5)
+                    placeholderText: "Position"
+                    selectByMouse: true
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    defaultBorderColor: acceptableInput ? "#3e4246" : "#c75450"
+                    activeBorderColor: acceptableInput ? "#3574f0" : "#e06c75"
+
+                    validator: DoubleValidator {
+                        bottom: root.dataContext.minimumPosition
+                        top: root.dataContext.maximumPosition
+                        decimals: 8
+                        notation: DoubleValidator.StandardNotation
+                        locale: "C"
+                    }
+
+                    function currentPositionText() {
+                        return Number(root.dataContext.slicePosition).toFixed(5)
+                    }
+
+                    function commitPosition() {
+                        if (!acceptableInput
+                                || !root.dataContext.setSlicePosition(Number(text))) {
+                            text = currentPositionText()
+                        }
+                    }
+
+                    onAccepted: {
+                        commitPosition()
+                        focus = false
+                    }
+                    onEditingFinished: commitPosition()
+
+                    Connections {
+                        target: root.dataContext
+                        function onSliceChanged() {
+                            if (!positionField.activeFocus)
+                                positionField.text = positionField.currentPositionText()
+                        }
+                    }
+                }
+
+                Label {
+                    text: "cm"
+                    color: "#a9b7c6"
                 }
             }
 
-            Label {
-                text: Number(root.dataContext.minimumValue).toPrecision(4) + " … " +
-                      Number(root.dataContext.maximumValue).toPrecision(4) + " G"
-                color: "#a9b7c6"
-                font.family: "monospace"
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    Layout.preferredWidth: 170
+                    implicitHeight: 14
+                    radius: 3
+                    clip: true
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "#440154" }
+                        GradientStop { position: 0.2; color: "#414487" }
+                        GradientStop { position: 0.4; color: "#2a788e" }
+                        GradientStop { position: 0.6; color: "#22a884" }
+                        GradientStop { position: 0.8; color: "#7ad151" }
+                        GradientStop { position: 1.0; color: "#fde725" }
+                    }
+
+                    Repeater {
+                        model: Math.max(0, root.dataContext.inductionBandCount - 1)
+                        Rectangle {
+                            required property int index
+                            x: (index + 1) * parent.width / root.dataContext.inductionBandCount
+                            width: 1
+                            height: parent.height
+                            color: "#b5101113"
+                        }
+                    }
+                }
+
+                Label {
+                    text: Number(root.dataContext.minimumValue).toPrecision(4) + " … " +
+                          Number(root.dataContext.maximumValue).toPrecision(4) + " G  ·  Δ " +
+                          Number(root.dataContext.inductionInterval).toPrecision(3) + " G"
+                    color: "#a9b7c6"
+                    font.family: "monospace"
+                }
             }
         }
     }

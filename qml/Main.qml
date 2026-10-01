@@ -12,6 +12,7 @@ ApplicationWindow {
     height: 700
     visible: true
     title: "TPC Controller"
+    color: "#18191a"
 
     ColumnLayout {
         anchors.fill: parent

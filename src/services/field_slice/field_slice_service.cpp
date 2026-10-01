@@ -66,6 +66,7 @@ namespace {
     }
 
     const double value_span = result->maximum_value - result->minimum_value;
+    std::vector<std::uint8_t> induction_bands(pixel_count);
     for (std::size_t y = 0; y < height; ++y) {
         if (stop_token.stop_requested()) {
             return {};
@@ -84,6 +85,37 @@ namespace {
                 ? (value - result->minimum_value) / value_span
                 : 0.5;
             scan_line[x] = viridis(normalized);
+            induction_bands[pixel] = static_cast<std::uint8_t>(std::min(
+                static_cast<std::size_t>(
+                    normalized * static_cast<double>(RenderedFieldSlice::induction_band_count)
+                ),
+                RenderedFieldSlice::induction_band_count - 1
+            ));
+        }
+    }
+
+    // Draw one-pixel isolines where neighbouring samples enter another
+    // induction range. Darkening the existing colour keeps the contour
+    // readable across the whole viridis palette without hiding field data.
+    for (std::size_t y = 0; y < height; ++y) {
+        auto* scan_line = reinterpret_cast<QRgb*>(result->image.scanLine(static_cast<int>(y)));
+        for (std::size_t x = 0; x < width; ++x) {
+            const std::size_t pixel = y * width + x;
+            if (!result->valid[pixel]) {
+                continue;
+            }
+            const bool crosses_horizontal_boundary = x > 0 && result->valid[pixel - 1]
+                && induction_bands[pixel] != induction_bands[pixel - 1];
+            const bool crosses_vertical_boundary = y > 0 && result->valid[pixel - width]
+                && induction_bands[pixel] != induction_bands[pixel - width];
+            if (crosses_horizontal_boundary || crosses_vertical_boundary) {
+                const QRgb color = scan_line[x];
+                scan_line[x] = qRgb(
+                    qRed(color) * 2 / 5,
+                    qGreen(color) * 2 / 5,
+                    qBlue(color) * 2 / 5
+                );
+            }
         }
     }
     return result;
