@@ -5,6 +5,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -22,6 +23,8 @@ class EventDispatcher;
 class TpcService;
 
 struct RenderedFieldSlice {
+    static constexpr std::size_t induction_band_count = 10;
+
     QImage image;
     std::vector<double> field;
     std::vector<std::uint8_t> valid;

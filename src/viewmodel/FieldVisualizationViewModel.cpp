@@ -1,9 +1,10 @@
-#include "viewmodel/FieldVisualizationViewModel.hpp"
+  #include "viewmodel/FieldVisualizationViewModel.hpp"
 
 #include <QMetaObject>
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "services/field_slice/field_slice_service.hpp"
 
@@ -36,12 +37,23 @@ QString FieldVisualizationViewModel::axis() const {
     return names[static_cast<std::size_t>(axis_index_)];
 }
 
-int FieldVisualizationViewModel::sliceIndex() const noexcept { return slice_index_; }
-int FieldVisualizationViewModel::sliceCount() const noexcept { return static_cast<int>(axis_coordinates_.size()); }
+double FieldVisualizationViewModel::slicePosition() const noexcept { return slice_position_; }
+double FieldVisualizationViewModel::minimumPosition() const noexcept { return minimum_position_; }
+double FieldVisualizationViewModel::maximumPosition() const noexcept { return maximum_position_; }
+double FieldVisualizationViewModel::positionStep() const noexcept {
+    static constexpr double slider_divisions = 500.0;
+    return (maximum_position_ - minimum_position_) / slider_divisions;
+}
 bool FieldVisualizationViewModel::available() const noexcept { return available_; }
 bool FieldVisualizationViewModel::loading() const noexcept { return loading_; }
 double FieldVisualizationViewModel::minimumValue() const noexcept { return minimum_value_; }
 double FieldVisualizationViewModel::maximumValue() const noexcept { return maximum_value_; }
+double FieldVisualizationViewModel::inductionInterval() const noexcept {
+    return (maximum_value_ - minimum_value_) / static_cast<double>(inductionBandCount());
+}
+int FieldVisualizationViewModel::inductionBandCount() const noexcept {
+    return static_cast<int>(services::RenderedFieldSlice::induction_band_count);
+}
 double FieldVisualizationViewModel::imageAspectRatio() const noexcept {
     if (!rendered_slice_ || rendered_slice_->image.height() == 0) {
         return 1.0;
@@ -55,10 +67,10 @@ QImage FieldVisualizationViewModel::sliceImage() const {
 }
 
 QString FieldVisualizationViewModel::positionLabel() const {
-    if (axis_coordinates_.empty()) {
+    if (!available_) {
         return QStringLiteral("—");
     }
-    return QStringLiteral("%1 = %2").arg(axis()).arg(axis_coordinates_[slice_index_], 0, 'g', 5);
+    return QStringLiteral("%1 = %2 cm").arg(axis()).arg(slice_position_, 0, 'g', 7);
 }
 
 void FieldVisualizationViewModel::setAxis(const QString& axis_name) {
@@ -68,19 +80,21 @@ void FieldVisualizationViewModel::setAxis(const QString& axis_name) {
         return;
     }
     axis_index_ = new_axis;
-    rebuildAxisCoordinates();
+    rebuildSliceRange();
 }
 
-void FieldVisualizationViewModel::setSliceIndex(int index) {
-    if (axis_coordinates_.empty()) {
-        return;
+bool FieldVisualizationViewModel::setSlicePosition(double position) {
+    if (!available_ || !std::isfinite(position)
+        || position < minimum_position_ || position > maximum_position_) {
+        return false;
     }
-    index = std::clamp(index, 0, static_cast<int>(axis_coordinates_.size()) - 1);
-    if (slice_index_ == index) {
-        return;
+    if (std::abs(slice_position_ - position)
+        <= std::numeric_limits<double>::epsilon() * std::max(1.0, std::abs(position))) {
+        return true;
     }
-    slice_index_ = index;
+    slice_position_ = position;
     requestCurrentSlice();
+    return true;
 }
 
 QVariantMap FieldVisualizationViewModel::sampleAt(double u, double v) const {
@@ -102,7 +116,7 @@ QVariantMap FieldVisualizationViewModel::sampleAt(double u, double v) const {
     const double projected_u = std::lerp(rendered_slice_->u_range[0], rendered_slice_->u_range[1], u);
     const double projected_v = std::lerp(rendered_slice_->v_range[1], rendered_slice_->v_range[0], v);
     std::array<double, 3> position{};
-    position[static_cast<std::size_t>(axis_index_)] = axis_coordinates_[static_cast<std::size_t>(slice_index_)];
+    position[static_cast<std::size_t>(axis_index_)] = slice_position_;
     position[static_cast<std::size_t>(axis_index_ == 0 ? 1 : 0)] = projected_u;
     position[static_cast<std::size_t>(axis_index_ == 2 ? 1 : 2)] = projected_v;
     return {
@@ -133,7 +147,7 @@ void FieldVisualizationViewModel::acceptGeometry(models::FieldGeometry geometry)
     const bool was_available = available_;
     geometry_ = geometry;
     available_ = geometry_.radius > 0.0 && geometry_.length > 0.0;
-    rebuildAxisCoordinates();
+    rebuildSliceRange();
     if (was_available != available_) {
         Q_EMIT availableChanged();
     }
@@ -153,24 +167,18 @@ void FieldVisualizationViewModel::acceptSlice(
     Q_EMIT imageChanged();
 }
 
-void FieldVisualizationViewModel::rebuildAxisCoordinates() {
-    axis_coordinates_.clear();
-    if (available_) {
-        const std::size_t count = std::max<std::size_t>(2, geometry_.grid[static_cast<std::size_t>(axis_index_)]);
-        const double extent = axis_index_ == 2 ? geometry_.length * 0.5 : geometry_.radius;
-        axis_coordinates_.reserve(count);
-        for (std::size_t index = 0; index < count; ++index) {
-            axis_coordinates_.push_back(
-                -extent + 2.0 * extent * static_cast<double>(index) / static_cast<double>(count - 1)
-            );
-        }
-    }
-    slice_index_ = axis_coordinates_.empty() ? 0 : static_cast<int>(axis_coordinates_.size() / 2);
+void FieldVisualizationViewModel::rebuildSliceRange() {
+    const double extent = available_
+        ? (axis_index_ == 2 ? geometry_.length * 0.5 : geometry_.radius)
+        : 0.0;
+    minimum_position_ = -extent;
+    maximum_position_ = extent;
+    slice_position_ = 0.0;
     requestCurrentSlice();
 }
 
 void FieldVisualizationViewModel::requestCurrentSlice() {
-    if (!available_ || axis_coordinates_.empty()) {
+    if (!available_) {
         return;
     }
     if (!loading_) {
@@ -180,7 +188,7 @@ void FieldVisualizationViewModel::requestCurrentSlice() {
     Q_EMIT sliceChanged();
     field_slices_.requestSlice(
         axis_index_,
-        axis_coordinates_[static_cast<std::size_t>(slice_index_)],
+        slice_position_,
         viewport_width_,
         viewport_height_
     );
