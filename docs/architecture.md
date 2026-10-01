@@ -46,10 +46,9 @@ models and view models must not include `tpc/system/*` or analytics headers.
 The adapter consumes the public `<tpc/tpc.hpp>` header and translates backend
 events into application-owned event types.
 
-Development builds may add a `TPC_API` source checkout with `TPC_API_DIR`.
-Release and CI builds may consume an installed package with `find_package(TPC
-CONFIG)` by setting `TPC_QT_USE_INSTALLED_TPC=ON`. Both modes link only the
-public `TPC::TPC` target.
+Meson first tries an installed `TPC` package and otherwise obtains the pinned
+`TPC_API` revision through `subprojects/tpc_api.wrap`. The local Meson overlay
+builds the library and exposes it only through the `tpc_dep` dependency.
 
 ## Settings
 
@@ -59,12 +58,13 @@ exists. Packaged applications must not write beside the executable.
 
 ## Packaging
 
-The build tree is for compilation only. A deployable directory is produced via:
+The normal build target is intended for development. A self-contained bundle
+is produced via:
 
 ```text
-cmake --install <build-directory> --prefix <staging-directory>
+meson compile -C <build-directory> deploy
 ```
 
-Qt's generated deployment script copies the required runtime libraries, QML
-imports, and plugins into the staging directory. Release archives and installers
-must be created from that directory, never from the build tree.
+The deploy target runs the platform Qt deployment tool and copies the required
+runtime libraries, QML imports, and plugins. Release archives and installers
+must be created from the deployed application, not the development executable.

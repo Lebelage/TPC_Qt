@@ -3,7 +3,6 @@
 .build/
 out/
 build/
-cmake-build-*/
 subprojects/*
 !subprojects/*.wrap
 !subprojects/packagefiles/

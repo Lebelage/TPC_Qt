@@ -1,7 +1,6 @@
 # Meson build
 
-The Meson build is maintained alongside CMake while feature and packaging
-parity is being evaluated. Meson 1.7 or newer is required.
+Meson is the project's build system. Meson 1.7 or newer is required.
 
 ## CLion
 
