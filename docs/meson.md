@@ -40,9 +40,31 @@ directory.
 
 ## Windows Release
 
-Install Qt and Visual Studio for the requested target architecture. From the
-matching Visual Studio Developer PowerShell, set `QT_ROOT` and `VCPKG_ROOT`,
-then run:
+Install Qt and Visual Studio for the requested target architecture. Open the
+matching Visual Studio Native Tools prompt. An `arm64_x64` prompt targets x64;
+use an `arm64` prompt when producing ARM64 binaries.
+
+From Developer Command Prompt (`cmd.exe`), run:
+
+```batch
+set "QT_ROOT=C:\Qt\6.11.2\msvc2022_64"
+set "VCPKG_ROOT=C:\dev\vcpkg"
+scripts\meson\setup-windows.cmd -Architecture x86_64
+meson compile -C .build\meson-windows-x86_64-release
+meson compile -C .build\meson-windows-x86_64-release deploy
+```
+
+For Windows ARM64 in Developer Command Prompt:
+
+```batch
+set "QT_ROOT=C:\Qt\6.11.2\msvc2022_arm64"
+set "VCPKG_ROOT=C:\dev\vcpkg"
+scripts\meson\setup-windows.cmd -Architecture arm64
+meson compile -C .build\meson-windows-arm64-release
+meson compile -C .build\meson-windows-arm64-release deploy
+```
+
+PowerShell uses different environment-variable syntax:
 
 ```powershell
 $env:QT_ROOT = "C:\Qt\6.11.2\msvc2022_64"
@@ -56,6 +78,7 @@ For Windows ARM64, use an ARM64 Qt installation and Developer PowerShell:
 
 ```powershell
 $env:QT_ROOT = "C:\Qt\6.11.2\msvc2022_arm64"
+$env:VCPKG_ROOT = "C:\dev\vcpkg"
 scripts\meson\setup-windows.cmd -Architecture arm64
 meson compile -C .build\meson-windows-arm64-release
 meson compile -C .build\meson-windows-arm64-release deploy
