@@ -1,0 +1,10 @@
+.DS_Store
+.idea/
+.build/
+out/
+build/
+cmake-build-*/
+subprojects/*
+!subprojects/*.wrap
+!subprojects/packagefiles/
+!subprojects/packagefiles/**

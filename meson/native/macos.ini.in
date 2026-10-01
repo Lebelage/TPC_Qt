@@ -1,0 +1,4 @@
+[binaries]
+qmake = '@QT_ROOT@/bin/qmake6'
+qmake6 = '@QT_ROOT@/bin/qmake6'
+macdeployqt = '@QT_ROOT@/bin/macdeployqt'

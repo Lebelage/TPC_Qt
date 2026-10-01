@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/Lebelage/TPC_API.git
+revision = ae33d244b0d6ead2bfc3d9d26f9349febdce018d
+patch_directory = tpc_api
+
+[provide]
+TPC = tpc_dep

@@ -1,0 +1,11 @@
+{
+  "name": "tpc-qt",
+  "version-string": "0.1.0",
+  "description": "Qt application for TPC control and magnetic-field visualization",
+  "dependencies": [
+    "eigen3",
+    "nlohmann-json",
+    "open62541pp",
+    "stdexec"
+  ]
+}
