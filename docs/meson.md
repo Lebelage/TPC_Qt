@@ -47,7 +47,7 @@ then run:
 ```powershell
 $env:QT_ROOT = "C:\Qt\6.11.2\msvc2022_64"
 $env:VCPKG_ROOT = "C:\dev\vcpkg"
-scripts\meson\setup-windows.ps1 x86_64
+scripts\meson\setup-windows.cmd -Architecture x86_64
 meson compile -C .build\meson-windows-x86_64-release
 meson compile -C .build\meson-windows-x86_64-release deploy
 ```
@@ -56,7 +56,7 @@ For Windows ARM64, use an ARM64 Qt installation and Developer PowerShell:
 
 ```powershell
 $env:QT_ROOT = "C:\Qt\6.11.2\msvc2022_arm64"
-scripts\meson\setup-windows.ps1 arm64
+scripts\meson\setup-windows.cmd -Architecture arm64
 meson compile -C .build\meson-windows-arm64-release
 meson compile -C .build\meson-windows-arm64-release deploy
 ```
@@ -66,6 +66,11 @@ dynamic MSVC runtime. The `deploy` target runs `windeployqt` with the project's
 QML source directory. Windows setup installs the package names from
 `vcpkg.json` in classic mode, so no registry baseline is required; vcpkg may
 select newer port versions as its checkout is updated.
+
+The `.cmd` launcher applies `ExecutionPolicy Bypass` only to the child
+PowerShell process that runs the setup script. It does not modify the user or
+machine execution policy. The `.ps1` file can still be invoked directly on
+systems where local PowerShell scripts are already allowed.
 
 ## TPC_API
 
