@@ -185,3 +185,25 @@ qt_generate_deploy_qml_app_script(
 )
 
 install(SCRIPT "${qt_deploy_script}")
+
+# ============================================================
+# Автоматический деплой DLL в папку сборки (Windows-only)
+# ============================================================
+if(WIN32)
+    # Определяем, где лежит windeployqt, на основе пути к Qt6::Core
+    get_target_property(_qt_core_location Qt6::Core LOCATION)
+    get_filename_component(_qt_bin_dir "${_qt_core_location}" DIRECTORY)
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${_qt_bin_dir}")
+
+    if(WINDEPLOYQT_EXECUTABLE)
+        # Добавляем команду, которая выполнится СРАЗУ после компиляции TPC_Qt
+        add_custom_command(TARGET TPC_Qt POST_BUILD
+            COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+                    --debug
+                    --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
+                    "$<TARGET_FILE:TPC_Qt>"
+            COMMENT "Running windeployqt to copy Qt DLLs and QML plugins..."
+        )
+    endif()
+endif()
+
