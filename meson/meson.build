@@ -58,7 +58,9 @@ host_arch = build_machine.cpu_family() == 'aarch64' ? 'arm64' : 'x64'
 host_platform = build_machine.system() == 'darwin' ? 'osx' : 'windows'
 triplet = vcpkg_arch + '-' + vcpkg_platform
 host_triplet = host_arch + '-' + host_platform
-install_root = meson.project_source_root() / '.build/meson-vcpkg' / triplet
+# Reuse packages already installed by the selected vcpkg checkout. vcpkg keeps
+# release and debug artifacts for a triplet together under this prefix.
+install_root = vcpkg_root / 'installed'
 dependency_prefix = install_root / triplet
 host_prefix = install_root / host_triplet
 # Track dependency inputs so changes trigger automatic reconfiguration.
@@ -66,15 +68,7 @@ configure_file(input: '../vcpkg.json', output: 'vcpkg-manifest.json', copy: true
 foreach input : ['triplets/arm64-osx.cmake', 'triplets/x64-osx.cmake', 'fix-qt-tools.cmake', '../scripts/meson/fix-qt-tools-macos.py']
   configure_file(input: input, output: fs.name(input), copy: true)
 endforeach
-message('Installing manifest dependencies with vcpkg (' + triplet + ')')
-install = run_command(vcpkg, '--vcpkg-root=' + vcpkg_root, 'install',
-  '--x-manifest-root=' + meson.project_source_root(),
-  '--x-install-root=' + install_root,
-  '--overlay-triplets=' + meson.current_source_dir() / 'triplets',
-  '--triplet=' + triplet, '--host-triplet=' + host_triplet, check: false)
-if install.returncode() != 0
-  error('vcpkg install failed:\n' + install.stdout() + install.stderr())
-endif
+message('Using preinstalled vcpkg dependencies (' + triplet + ')')
 
 managed_cmake_args = [
   '-DCMAKE_PREFIX_PATH=' + dependency_prefix,
