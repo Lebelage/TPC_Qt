@@ -63,7 +63,9 @@ meson compile -C .build\meson-windows-arm64-release deploy
 
 The Windows machine files select Release, size optimization, LTO, and the
 dynamic MSVC runtime. The `deploy` target runs `windeployqt` with the project's
-QML source directory.
+QML source directory. Windows setup installs the package names from
+`vcpkg.json` in classic mode, so no registry baseline is required; vcpkg may
+select newer port versions as its checkout is updated.
 
 ## TPC_API
 

@@ -16,6 +16,10 @@ $InstallRoot = Join-Path $ProjectDir ".build\meson-vcpkg\$Triplet"
 $DependencyPrefix = Join-Path $InstallRoot $Triplet
 $MachineDir = Join-Path $ProjectDir ".build\meson-machines"
 $CrossFile = Join-Path $MachineDir "windows-$Architecture.ini"
+$Manifest = Get-Content -Raw (Join-Path $ProjectDir "vcpkg.json") | ConvertFrom-Json
+$VcpkgPackages = @($Manifest.dependencies | ForEach-Object {
+    if ($_ -is [string]) { $_ } else { $_.name }
+})
 
 New-Item -ItemType Directory -Force -Path $MachineDir | Out-Null
 $NormalizedQtRoot = $QtRoot.Replace("\", "/")
@@ -26,9 +30,10 @@ if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
 }
 
 & (Join-Path $VcpkgRoot "vcpkg.exe") install `
-    "--x-manifest-root=$ProjectDir" `
+    --classic `
     "--x-install-root=$InstallRoot" `
-    "--triplet=$Triplet"
+    "--triplet=$Triplet" `
+    @VcpkgPackages
 
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
