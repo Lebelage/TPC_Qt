@@ -10,16 +10,18 @@ endif
 environment_vcpkg_root = env_probe.stdout().strip()
 
 vcpkg_name = build_machine.system() == 'windows' ? 'vcpkg.exe' : 'vcpkg'
-vcpkg_root = configured_vcpkg_root != '' \
-  ? configured_vcpkg_root \
-  : environment_vcpkg_root
-if vcpkg_root != ''
-  vcpkg = find_program(vcpkg_root / vcpkg_name, required: false)
+vcpkg_root = configured_vcpkg_root
+if configured_vcpkg_root != ''
+  vcpkg = find_program(configured_vcpkg_root / vcpkg_name, required: false)
 else
-  vcpkg = disabler()
-endif
-if not vcpkg.found()
+  # Match the executable selected by `vcpkg` in the user's terminal. Visual
+  # Studio may set VCPKG_ROOT to its bundled copy even when PATH points to a
+  # separately installed checkout.
   vcpkg = find_program(vcpkg_name, required: false)
+endif
+if not vcpkg.found() and environment_vcpkg_root != ''
+  vcpkg_root = environment_vcpkg_root
+  vcpkg = find_program(vcpkg_root / vcpkg_name, required: false)
 endif
 if not vcpkg.found()
   error('vcpkg was not found in PATH. Install it or set VCPKG_ROOT.')
