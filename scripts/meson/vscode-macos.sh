@@ -13,7 +13,7 @@ fi
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 project_dir=$(CDPATH= cd -- "$script_dir/../.." && pwd)
-QT_ROOT="${QT_ROOT:-$HOME/Qt/6.12.0/macos}"
+QT_ROOT="${QT_ROOT:-$HOME/Qt/6.11.2/macos}"
 VCPKG_ROOT="${VCPKG_ROOT:-$HOME/dev/vcpkg}"
 PATH="/opt/homebrew/bin:$QT_ROOT/bin:$PATH"
 export QT_ROOT VCPKG_ROOT PATH

@@ -17,7 +17,7 @@ esac
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 project_dir=$(CDPATH= cd -- "$script_dir/../.." && pwd)
-qt_root="${QT_ROOT:-$HOME/Qt/6.12.0/macos}"
+qt_root="${QT_ROOT:-$HOME/Qt/6.11.2/macos}"
 vcpkg_root="${VCPKG_ROOT:-$HOME/dev/vcpkg}"
 build_dir="$project_dir/.build/meson-macos-$architecture-$build_type"
 install_root="$project_dir/.build/meson-vcpkg/$triplet"
