@@ -1,1 +1,1 @@
-option('vcpkg_root', type: 'string', value: '', description: 'Optional installed vcpkg checkout; otherwise use VCPKG_ROOT or PATH')
+option('vcpkg_root', type: 'string', value: '', description: 'Explicit vcpkg registry checkout; otherwise use .build/vcpkg-root')

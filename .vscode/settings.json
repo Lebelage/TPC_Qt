@@ -1,4 +1,16 @@
 {
     "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
-    "cmake.sourceDirectory": "/Users/sonora/Dev/TPC/TPC_Qt/subprojects/tpc_api"
+    "cmake.sourceDirectory": "/Users/sonora/Dev/TPC/TPC_Qt/subprojects/tpc_api",
+    "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/.build/meson-macos-arm64-release"
+    ],
+    "clangd.enableCodeCompletion": true,
+    "[cpp]": {
+        "editor.quickSuggestions": {
+            "other": "on",
+            "comments": "off",
+            "strings": "off"
+        },
+        "editor.suggestOnTriggerCharacters": true
+    }
 }

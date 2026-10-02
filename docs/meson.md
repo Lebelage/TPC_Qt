@@ -1,10 +1,11 @@
 # Сборка Meson + vcpkg
 
 Проект рассчитывает на установленные компилятор, Meson, Ninja, CMake, Git и vcpkg.
-Бинарник vcpkg должен быть доступен через `PATH`. Полный checkout можно указать
-через `VCPKG_ROOT` или `-Dvcpkg_root=/path/to/vcpkg`. Если установлен только
-бинарник (так работает формула Homebrew), Meson сам загружает служебный checkout
-нужной версии в `.build/vcpkg-root`. Отдельная команда настройки не требуется.
+Бинарник vcpkg должен быть доступен через `PATH` или находиться в системном
+`VCPKG_ROOT`. Registry checkout с закреплённым baseline Meson хранит отдельно в
+`.build/vcpkg-root`, поэтому старый системный checkout не влияет на зависимости.
+Другой checkout можно явно передать через `-Dvcpkg_root=/path/to/vcpkg`.
+Отдельная команда настройки не требуется.
 
 ```sh
 meson setup build --buildtype=debug

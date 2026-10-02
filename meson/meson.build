@@ -1,35 +1,35 @@
 fs = import('fs')
-vcpkg_root = get_option('vcpkg_root')
-if vcpkg_root == ''
+configured_vcpkg_root = get_option('vcpkg_root')
+environment_vcpkg_root = ''
+if configured_vcpkg_root == ''
   if build_machine.system() == 'windows'
     env_probe = run_command(find_program('powershell.exe'), '-NoLogo', '-NoProfile',
       '-Command', '[Environment]::GetEnvironmentVariable("VCPKG_ROOT")', check: true)
   else
     env_probe = run_command(find_program('sh'), '-c', 'printf %s "$VCPKG_ROOT"', check: true)
   endif
-  vcpkg_root = env_probe.stdout().strip()
+  environment_vcpkg_root = env_probe.stdout().strip()
 endif
 vcpkg_name = build_machine.system() == 'windows' ? 'vcpkg.exe' : 'vcpkg'
 vcpkg = find_program(vcpkg_name, required: false)
-if not vcpkg.found() and vcpkg_root != ''
-  vcpkg = find_program(vcpkg_root / vcpkg_name)
-elif not vcpkg.found()
+if not vcpkg.found() and configured_vcpkg_root != ''
+  vcpkg = find_program(configured_vcpkg_root / vcpkg_name, required: false)
+endif
+if not vcpkg.found() and environment_vcpkg_root != ''
+  vcpkg = find_program(environment_vcpkg_root / vcpkg_name, required: false)
+endif
+if not vcpkg.found()
   error('vcpkg was not found in PATH. Install it or set VCPKG_ROOT.')
 endif
 
 # A package manager may install only the vcpkg executable. vcpkg still needs
-# its scripts and ports checkout. Use an explicitly supplied checkout when
-# available; otherwise keep one in the ignored project build directory.
-managed_vcpkg_root = false
-if vcpkg_root == ''
-  executable_root = fs.parent(fs.parent(vcpkg.full_path()))
-  if fs.exists(executable_root / '.vcpkg-root')
-    vcpkg_root = executable_root
-  else
-    vcpkg_root = meson.project_source_root() / '.build/vcpkg-root'
-    managed_vcpkg_root = true
-  endif
-endif
+# its scripts and ports checkout. Keep the project's registry checkout isolated
+# from a possibly stale system VCPKG_ROOT. Only the explicit Meson option opts
+# into using and managing an external checkout.
+managed_vcpkg_root = configured_vcpkg_root == ''
+vcpkg_root = managed_vcpkg_root \
+  ? meson.project_source_root() / '.build/vcpkg-root' \
+  : configured_vcpkg_root
 
 if managed_vcpkg_root
   manifest_text = fs.read('../vcpkg.json')
@@ -88,7 +88,7 @@ foreach input : ['triplets/arm64-osx.cmake', 'triplets/x64-osx.cmake', 'fix-qt-t
   configure_file(input: input, output: fs.name(input), copy: true)
 endforeach
 message('Installing manifest dependencies with vcpkg (' + triplet + ')')
-install = run_command(vcpkg, 'install',
+install = run_command(vcpkg, '--vcpkg-root=' + vcpkg_root, 'install',
   '--x-manifest-root=' + meson.project_source_root(),
   '--x-install-root=' + install_root,
   '--overlay-triplets=' + meson.current_source_dir() / 'triplets',

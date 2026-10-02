@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection
     );
+    
 
     engine.loadFromModule("TPC", "Main");
 
