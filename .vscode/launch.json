@@ -2,108 +2,69 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "TPC_Qt: Debug (Meson, MSVC x64)",
+            "name": "TPC_Qt: Windows Debug",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.build/meson-windows-x86_64-debug/TPC_Qt.exe",
+            "program": "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-debug/TPC_Qt.exe",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "externalConsole": false,
-            "preLaunchTask": "Meson: build Debug x64",
-            "environment": [
-                {
-                    "name": "QT_FORCE_STDERR_LOGGING",
-                    "value": "1"
-                }
-            ]
+            "preLaunchTask": "Meson: build Windows Debug",
+            "environment": [{ "name": "QT_FORCE_STDERR_LOGGING", "value": "1" }]
         },
         {
-            "name": "TPC_Qt: Release (Meson, MSVC x64)",
+            "name": "TPC_Qt: Windows Release",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/.build/meson-windows-x86_64-release/TPC_Qt.exe",
+            "program": "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-release/TPC_Qt.exe",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "externalConsole": false,
-            "preLaunchTask": "Meson: build Release x64",
-            "environment": [
-                {
-                    "name": "QT_FORCE_STDERR_LOGGING",
-                    "value": "1"
-                }
-            ]
+            "preLaunchTask": "Meson: build Windows Release",
+            "environment": [{ "name": "QT_FORCE_STDERR_LOGGING", "value": "1" }]
         },
         {
-            "name": "TPC_Qt: Debug (Meson, MSVC ARM64)",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/.build/meson-windows-arm64-debug/TPC_Qt.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "stopAtEntry": false,
-            "externalConsole": false,
-            "preLaunchTask": "Meson: build Debug ARM64",
-            "environment": [
-                {
-                    "name": "QT_FORCE_STDERR_LOGGING",
-                    "value": "1"
-                }
-            ]
-        },
-        {
-            "name": "TPC_Qt: Release (Meson, MSVC ARM64)",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/.build/meson-windows-arm64-release/TPC_Qt.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "stopAtEntry": false,
-            "externalConsole": false,
-            "preLaunchTask": "Meson: build Release ARM64",
-            "environment": [
-                {
-                    "name": "QT_FORCE_STDERR_LOGGING",
-                    "value": "1"
-                }
-            ]
-        },
-        {
-            "name": "TPC_Qt: Attach to process",
+            "name": "TPC_Qt: Windows Attach",
             "type": "cppvsdbg",
             "request": "attach",
             "processId": "${command:pickProcess}"
         },
         {
-            "name": "TPC_Qt: Debug (macOS Apple Silicon)",
+            "name": "TPC_Qt: macOS Debug",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/.build/meson-macos-arm64-debug/TPC_Qt.app/Contents/MacOS/TPC_Qt",
+            "program": "${workspaceFolder}/.build/meson-macos-native-debug/TPC_Qt.app/Contents/MacOS/TPC_Qt",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Meson: build Debug macOS ARM64",
-            "env": {
-                "QT_FORCE_STDERR_LOGGING": "1"
-            }
+            "preLaunchTask": "Meson: build macOS Debug",
+            "env": { "QT_FORCE_STDERR_LOGGING": "1" }
         },
         {
-            "name": "TPC_Qt: Release (macOS Apple Silicon)",
+            "name": "TPC_Qt: macOS Release",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/.build/meson-macos-arm64-release/TPC_Qt.app/Contents/MacOS/TPC_Qt",
+            "program": "${workspaceFolder}/.build/meson-macos-native-release/TPC_Qt.app/Contents/MacOS/TPC_Qt",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Meson: build Release macOS ARM64",
-            "env": {
-                "QT_FORCE_STDERR_LOGGING": "1"
-            }
+            "preLaunchTask": "Meson: build macOS Release",
+            "env": { "QT_FORCE_STDERR_LOGGING": "1" }
         },
         {
-            "name": "TPC_Qt: Attach (macOS LLDB)",
+            "name": "TPC_Qt: macOS Attach",
             "type": "lldb",
             "request": "attach",
             "pid": "${command:pickMyProcess}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "windowsArch",
+            "type": "pickString",
+            "description": "Целевая архитектура Windows",
+            "options": ["x86_64", "arm64"],
+            "default": "x86_64"
         }
     ]
 }

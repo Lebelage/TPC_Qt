@@ -50,11 +50,12 @@ qt6_dep = declare_dependency(compile_args: qt_include_args + qt_compile_args, li
 qt_build_rpath = dependency_prefix / (get_option('buildtype') == 'debug' ? 'debug/lib' : 'lib')
 qt_install_rpath = host_machine.system() == 'darwin' ? '@executable_path/../Frameworks' : ''
 nlohmann_json_dep = dependency('nlohmann_json', method: 'cmake',
-  modules: ['nlohmann_json::nlohmann_json'], cmake_args: managed_cmake_args)
+  modules: ['nlohmann_json::nlohmann_json'], cmake_args: managed_cmake_args, required: true)
 
 # Make the same restricted dependency search available to the TPC subproject.
 foreach entry : [['Eigen3', 'Eigen3::Eigen'], ['open62541pp', 'open62541pp::open62541pp'], ['stdexec', 'STDEXEC::stdexec']]
-  dep = dependency(entry[0], method: 'cmake', modules: [entry[1]], cmake_args: managed_cmake_args)
+  dep = dependency(entry[0], method: 'cmake', modules: [entry[1]],
+    cmake_args: managed_cmake_args, required: true)
   meson.override_dependency(entry[0], dep)
 endforeach
 

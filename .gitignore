@@ -4,6 +4,7 @@
 out/
 build/
 dist/
+vcpkg_installed/
 subprojects/*
 !subprojects/*.wrap
 !subprojects/packagefiles/

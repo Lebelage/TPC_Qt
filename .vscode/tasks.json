@@ -2,514 +2,170 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Meson: configure Debug x64",
+            "label": "Meson: configure Windows Debug",
             "type": "process",
             "command": "meson",
             "args": [
                 "setup",
-                "--reconfigure",
-                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
+                "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-debug",
                 "--buildtype=debug",
                 "--cross-file",
-                "${workspaceFolder}/meson/cross/windows-x86_64.ini"
+                "${workspaceFolder}/meson/cross/windows-${input:windowsArch}.ini"
             ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": []
         },
         {
-            "label": "Meson: build Debug x64",
+            "label": "Meson: build Windows Debug",
             "type": "process",
             "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-debug", "deploy"],
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Debug x64",
-            "group": "build"
+            "dependsOn": "Meson: configure Windows Debug",
+            "group": { "kind": "build", "isDefault": true }
         },
         {
-            "label": "Meson: deploy Debug x64",
+            "label": "Meson: run Windows Debug",
             "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Debug x64"
+            "command": "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-debug/TPC_Qt.exe",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "dependsOn": "Meson: build Windows Debug"
         },
         {
-            "label": "Meson: clean Debug x64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
-                "--clean"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "Meson: run Debug x64",
-            "type": "process",
-            "command": "${workspaceFolder}/.build/meson-windows-x86_64-debug/TPC_Qt.exe",
-            "dependsOn": "Meson: build Debug x64",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: configure Release x64",
+            "label": "Meson: configure Windows Release",
             "type": "process",
             "command": "meson",
             "args": [
                 "setup",
-                "--reconfigure",
-                "${workspaceFolder}/.build/meson-windows-x86_64-release",
+                "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-release",
                 "--buildtype=release",
                 "--cross-file",
-                "${workspaceFolder}/meson/cross/windows-x86_64.ini"
+                "${workspaceFolder}/meson/cross/windows-${input:windowsArch}.ini"
             ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": []
         },
         {
-            "label": "Meson: build Release x64",
+            "label": "Meson: build Windows Release",
             "type": "process",
             "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-x86_64-release",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-release", "deploy"],
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Release x64",
+            "dependsOn": "Meson: configure Windows Release",
             "group": "build"
         },
         {
-            "label": "Meson: deploy Release x64",
+            "label": "Meson: run Windows Release",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-release/TPC_Qt.exe",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "dependsOn": "Meson: build Windows Release"
+        },
+        {
+            "label": "Meson: package Windows",
             "type": "process",
             "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-x86_64-release",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-release", "package"],
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Release x64"
+            "dependsOn": "Meson: configure Windows Release"
         },
         {
-            "label": "Meson: clean Release x64",
+            "label": "Meson: configure macOS Debug",
             "type": "process",
             "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-x86_64-release",
-                "--clean"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "Meson: package Release x64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-x86_64-release",
-                "package"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Release x64"
-        },
-        {
-            "label": "Meson: run Release x64",
-            "type": "process",
-            "command": "${workspaceFolder}/.build/meson-windows-x86_64-release/TPC_Qt.exe",
-            "dependsOn": "Meson: build Release x64",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "args": ["setup", "${workspaceFolder}/.build/meson-macos-native-debug", "--buildtype=debug"],
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": []
         },
         {
-            "label": "Meson: configure Debug ARM64",
+            "label": "Meson: build macOS Debug",
             "type": "process",
             "command": "meson",
-            "args": [
-                "setup",
-                "--reconfigure",
-                "${workspaceFolder}/.build/meson-windows-arm64-debug",
-                "--buildtype=debug",
-                "--cross-file",
-                "${workspaceFolder}/meson/cross/windows-arm64.ini"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: build Debug ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-arm64-debug",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Debug ARM64",
-            "group": "build"
-        },
-        {
-            "label": "Meson: deploy Debug ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-arm64-debug",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Debug ARM64"
-        },
-        {
-            "label": "Meson: clean Debug ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-arm64-debug",
-                "--clean"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "Meson: run Debug ARM64",
-            "type": "process",
-            "command": "${workspaceFolder}/.build/meson-windows-arm64-debug/TPC_Qt.exe",
-            "dependsOn": "Meson: build Debug ARM64",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: configure Release ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "setup",
-                "--reconfigure",
-                "${workspaceFolder}/.build/meson-windows-arm64-release",
-                "--buildtype=release",
-                "--cross-file",
-                "${workspaceFolder}/meson/cross/windows-arm64.ini"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: build Release ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-arm64-release",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Release ARM64",
-            "group": "build"
-        },
-        {
-            "label": "Meson: deploy Release ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-arm64-release",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Release ARM64"
-        },
-        {
-            "label": "Meson: clean Release ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-arm64-release",
-                "--clean"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "Meson: package Release ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-windows-arm64-release",
-                "package"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$msCompile",
-            "dependsOn": "Meson: configure Release ARM64"
-        },
-        {
-            "label": "Meson: run Release ARM64",
-            "type": "process",
-            "command": "${workspaceFolder}/.build/meson-windows-arm64-release/TPC_Qt.exe",
-            "dependsOn": "Meson: build Release ARM64",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: configure Debug macOS ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "setup",
-                "--reconfigure",
-                "${workspaceFolder}/.build/meson-macos-arm64-debug",
-                "--buildtype=debug"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: build Debug macOS ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-macos-arm64-debug",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-macos-native-debug", "deploy"],
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": "$gcc",
-            "dependsOn": "Meson: configure Debug macOS ARM64",
+            "dependsOn": "Meson: configure macOS Debug",
+            "group": { "kind": "build", "isDefault": true }
+        },
+        {
+            "label": "Meson: run macOS Debug",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/meson-macos-native-debug/TPC_Qt.app/Contents/MacOS/TPC_Qt",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "dependsOn": "Meson: build macOS Debug"
+        },
+        {
+            "label": "Meson: configure macOS Release",
+            "type": "process",
+            "command": "meson",
+            "args": ["setup", "${workspaceFolder}/.build/meson-macos-native-release", "--buildtype=release"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Meson: build macOS Release",
+            "type": "process",
+            "command": "meson",
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-macos-native-release", "deploy"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": "$gcc",
+            "dependsOn": "Meson: configure macOS Release",
             "group": "build"
         },
         {
-            "label": "Meson: deploy Debug macOS ARM64",
+            "label": "Meson: run macOS Release",
             "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-macos-arm64-debug",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$gcc",
-            "dependsOn": "Meson: configure Debug macOS ARM64"
+            "command": "${workspaceFolder}/.build/meson-macos-native-release/TPC_Qt.app/Contents/MacOS/TPC_Qt",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "dependsOn": "Meson: build macOS Release"
         },
         {
-            "label": "Meson: clean Debug macOS ARM64",
+            "label": "Meson: package macOS",
             "type": "process",
             "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-macos-arm64-debug",
-                "--clean"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-macos-native-release", "package"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": "$gcc",
+            "dependsOn": "Meson: configure macOS Release"
+        },
+        {
+            "label": "Meson: clean Windows",
+            "type": "process",
+            "command": "meson",
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-${input:buildType}", "--clean"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Meson: clean macOS",
+            "type": "process",
+            "command": "meson",
+            "args": ["compile", "-C", "${workspaceFolder}/.build/meson-macos-native-${input:buildType}", "--clean"],
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": "$gcc"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "windowsArch",
+            "type": "pickString",
+            "description": "Целевая архитектура Windows",
+            "options": ["x86_64", "arm64"],
+            "default": "x86_64"
         },
         {
-            "label": "Meson: run Debug macOS ARM64",
-            "type": "process",
-            "command": "${workspaceFolder}/.build/meson-macos-arm64-debug/TPC_Qt.app/Contents/MacOS/TPC_Qt",
-            "dependsOn": "Meson: build Debug macOS ARM64",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: configure Release macOS ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "setup",
-                "--reconfigure",
-                "${workspaceFolder}/.build/meson-macos-arm64-release",
-                "--buildtype=release"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: build Release macOS ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-macos-arm64-release",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$gcc",
-            "dependsOn": "Meson: configure Release macOS ARM64",
-            "group": "build"
-        },
-        {
-            "label": "Meson: deploy Release macOS ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-macos-arm64-release",
-                "deploy"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$gcc",
-            "dependsOn": "Meson: configure Release macOS ARM64"
-        },
-        {
-            "label": "Meson: clean Release macOS ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-macos-arm64-release",
-                "--clean"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$gcc"
-        },
-        {
-            "label": "Meson: package Release macOS ARM64",
-            "type": "process",
-            "command": "meson",
-            "args": [
-                "compile",
-                "-C",
-                "${workspaceFolder}/.build/meson-macos-arm64-release",
-                "package"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": "$gcc",
-            "dependsOn": "Meson: configure Release macOS ARM64"
-        },
-        {
-            "label": "Meson: run Release macOS ARM64",
-            "type": "process",
-            "command": "${workspaceFolder}/.build/meson-macos-arm64-release/TPC_Qt.app/Contents/MacOS/TPC_Qt",
-            "dependsOn": "Meson: build Release macOS ARM64",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Meson: build Debug (native)",
-            "dependsOn": [
-                "Meson: build Debug x64"
-            ],
-            "osx": {
-                "dependsOn": [
-                    "Meson: build Debug macOS ARM64"
-                ]
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": []
+            "id": "buildType",
+            "type": "pickString",
+            "description": "Конфигурация сборки",
+            "options": ["debug", "release"],
+            "default": "debug"
         }
     ]
 }

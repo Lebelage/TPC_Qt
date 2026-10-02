@@ -24,7 +24,7 @@ if not vcpkg.found() and environment_vcpkg_root != ''
   vcpkg = find_program(vcpkg_root / vcpkg_name, required: false)
 endif
 if not vcpkg.found()
-  error('vcpkg was not found in PATH. Install it or set VCPKG_ROOT.')
+  error('vcpkg was not found. Add it to PATH, set VCPKG_ROOT, or pass -Dvcpkg_root=/path/to/vcpkg.')
 endif
 
 # A regular cloned vcpkg checkout keeps its executable at the root. This lets
@@ -63,11 +63,14 @@ host_triplet = host_arch + '-' + host_platform
 install_root = vcpkg_root / 'installed'
 dependency_prefix = install_root / triplet
 host_prefix = install_root / host_triplet
-# Track dependency inputs so changes trigger automatic reconfiguration.
-configure_file(input: '../vcpkg.json', output: 'vcpkg-manifest.json', copy: true)
-foreach input : ['triplets/arm64-osx.cmake', 'triplets/x64-osx.cmake', 'fix-qt-tools.cmake', '../scripts/meson/fix-qt-tools-macos.py']
-  configure_file(input: input, output: fs.name(input), copy: true)
-endforeach
+if not fs.is_dir(dependency_prefix)
+  error('No installed vcpkg packages found for ' + triplet + ' at ' + dependency_prefix +
+    '. Install the project dependencies before configuring the build.')
+endif
+if not fs.is_dir(host_prefix)
+  error('No installed vcpkg host tools found for ' + host_triplet + ' at ' + host_prefix +
+    '. Install the project dependencies before configuring the build.')
+endif
 message('Using preinstalled vcpkg dependencies (' + triplet + ')')
 
 managed_cmake_args = [
