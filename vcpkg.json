@@ -6,6 +6,34 @@
     "eigen3",
     "nlohmann-json",
     "open62541pp",
-    "stdexec"
-  ]
+    "stdexec",
+    {
+      "name": "qtbase",
+      "default-features": false,
+      "features": [
+        "concurrent",
+        "gui",
+        "widgets",
+        "network",
+        "dnslookup",
+        "opengl",
+        "png",
+        "jpeg",
+        "thread",
+        {
+          "name": "framework",
+          "platform": "osx"
+        },
+        {
+          "name": "windeployqt",
+          "platform": "windows"
+        }
+      ]
+    },
+    {
+      "name": "qtdeclarative",
+      "default-features": false
+    }
+  ],
+  "builtin-baseline": "3aea538b2bb21a586502c67b00eb474fdd2e3098"
 }

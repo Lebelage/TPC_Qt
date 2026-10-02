@@ -1,0 +1,14 @@
+[Paths]
+Prefix=@PREFIX@
+Headers=include/Qt6
+Libraries=@CONFIG_PREFIX@lib
+Binaries=@CONFIG_PREFIX@bin
+Plugins=@CONFIG_PREFIX@Qt6/plugins
+Qml2Imports=@CONFIG_PREFIX@Qt6/qml
+Data=share/Qt6
+ArchData=share/Qt6
+HostPrefix=@HOST_PREFIX@
+HostBinaries=tools/Qt6/bin
+HostLibraryExecutables=tools/Qt6/bin
+LibraryExecutables=tools/Qt6/bin
+HostData=share/Qt6

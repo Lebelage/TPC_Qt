@@ -4,855 +4,512 @@
         {
             "label": "Meson: configure Debug x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "configure",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "x86_64"
+                "setup",
+                "--reconfigure",
+                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
+                "--buildtype=debug",
+                "--cross-file",
+                "${workspaceFolder}/meson/cross/windows-x86_64.ini"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": []
         },
         {
             "label": "Meson: build Debug x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "build",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "x86_64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": false
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Debug x64",
+            "group": "build"
         },
         {
-            "label": "Meson: run Debug x64",
+            "label": "Meson: deploy Debug x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "run",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "x86_64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Debug x64"
         },
         {
             "label": "Meson: clean Debug x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "clean",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "x86_64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-x86_64-debug",
+                "--clean"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Meson: run Debug x64",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/meson-windows-x86_64-debug/TPC_Qt.exe",
+            "dependsOn": "Meson: build Debug x64",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
         },
         {
             "label": "Meson: configure Release x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "configure",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "x86_64"
+                "setup",
+                "--reconfigure",
+                "${workspaceFolder}/.build/meson-windows-x86_64-release",
+                "--buildtype=release",
+                "--cross-file",
+                "${workspaceFolder}/meson/cross/windows-x86_64.ini"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": []
         },
         {
             "label": "Meson: build Release x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "build",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "x86_64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-x86_64-release",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": false
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release x64",
+            "group": "build"
         },
         {
-            "label": "Meson: run Release x64",
+            "label": "Meson: deploy Release x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "run",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "x86_64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-x86_64-release",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release x64"
         },
         {
             "label": "Meson: clean Release x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "clean",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "x86_64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-x86_64-release",
+                "--clean"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": "$msCompile"
         },
         {
             "label": "Meson: package Release x64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "package",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "x86_64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-x86_64-release",
+                "package"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release x64"
+        },
+        {
+            "label": "Meson: run Release x64",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/meson-windows-x86_64-release/TPC_Qt.exe",
+            "dependsOn": "Meson: build Release x64",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
         },
         {
             "label": "Meson: configure Debug ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "configure",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "arm64"
+                "setup",
+                "--reconfigure",
+                "${workspaceFolder}/.build/meson-windows-arm64-debug",
+                "--buildtype=debug",
+                "--cross-file",
+                "${workspaceFolder}/meson/cross/windows-arm64.ini"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": []
         },
         {
             "label": "Meson: build Debug ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "build",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "arm64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-arm64-debug",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": false
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Debug ARM64",
+            "group": "build"
         },
         {
-            "label": "Meson: run Debug ARM64",
+            "label": "Meson: deploy Debug ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "run",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "arm64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-arm64-debug",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Debug ARM64"
         },
         {
             "label": "Meson: clean Debug ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "clean",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "arm64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-arm64-debug",
+                "--clean"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Meson: run Debug ARM64",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/meson-windows-arm64-debug/TPC_Qt.exe",
+            "dependsOn": "Meson: build Debug ARM64",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
         },
         {
             "label": "Meson: configure Release ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "configure",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "arm64"
+                "setup",
+                "--reconfigure",
+                "${workspaceFolder}/.build/meson-windows-arm64-release",
+                "--buildtype=release",
+                "--cross-file",
+                "${workspaceFolder}/meson/cross/windows-arm64.ini"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": []
         },
         {
             "label": "Meson: build Release ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "build",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "arm64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-arm64-release",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": false
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release ARM64",
+            "group": "build"
         },
         {
-            "label": "Meson: run Release ARM64",
+            "label": "Meson: deploy Release ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "run",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "arm64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-arm64-release",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release ARM64"
         },
         {
             "label": "Meson: clean Release ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "clean",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "arm64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-arm64-release",
+                "--clean"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": "$msCompile"
         },
         {
             "label": "Meson: package Release ARM64",
             "type": "process",
-            "command": "powershell.exe",
+            "command": "meson",
             "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "package",
-                "-BuildType",
-                "release",
-                "-Architecture",
-                "arm64"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-windows-arm64-release",
+                "package"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootArm64}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release ARM64"
+        },
+        {
+            "label": "Meson: run Release ARM64",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/meson-windows-arm64-release/TPC_Qt.exe",
+            "dependsOn": "Meson: build Release ARM64",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
         },
         {
             "label": "Meson: configure Debug macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "configure",
-                "debug"
+                "setup",
+                "--reconfigure",
+                "${workspaceFolder}/.build/meson-macos-arm64-debug",
+                "--buildtype=debug"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": []
         },
         {
             "label": "Meson: build Debug macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "build",
-                "debug"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-macos-arm64-debug",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "group": "build",
             "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Debug macOS ARM64",
+            "group": "build"
         },
         {
-            "label": "Meson: run Debug macOS ARM64",
+            "label": "Meson: deploy Debug macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "run",
-                "debug"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-macos-arm64-debug",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Debug macOS ARM64"
         },
         {
             "label": "Meson: clean Debug macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "clean",
-                "debug"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-macos-arm64-debug",
+                "--clean"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Meson: run Debug macOS ARM64",
+            "type": "process",
+            "command": "${workspaceFolder}/.build/meson-macos-arm64-debug/TPC_Qt.app/Contents/MacOS/TPC_Qt",
+            "dependsOn": "Meson: build Debug macOS ARM64",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
         },
         {
             "label": "Meson: configure Release macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "configure",
-                "release"
+                "setup",
+                "--reconfigure",
+                "${workspaceFolder}/.build/meson-macos-arm64-release",
+                "--buildtype=release"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": []
         },
         {
             "label": "Meson: build Release macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "build",
-                "release"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-macos-arm64-release",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "group": "build",
             "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release macOS ARM64",
+            "group": "build"
         },
         {
-            "label": "Meson: run Release macOS ARM64",
+            "label": "Meson: deploy Release macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "run",
-                "release"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-macos-arm64-release",
+                "deploy"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release macOS ARM64"
         },
         {
             "label": "Meson: clean Release macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "clean",
-                "release"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-macos-arm64-release",
+                "--clean"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "problemMatcher": "$gcc"
         },
         {
             "label": "Meson: package Release macOS ARM64",
             "type": "process",
-            "command": "/bin/sh",
+            "command": "meson",
             "args": [
-                "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                "package",
-                "release"
+                "compile",
+                "-C",
+                "${workspaceFolder}/.build/meson-macos-arm64-release",
+                "package"
             ],
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRootMacos}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                }
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": "$gcc",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
+            "dependsOn": "Meson: configure Release macOS ARM64"
         },
         {
-            "label": "Meson: build native Debug",
+            "label": "Meson: run Release macOS ARM64",
             "type": "process",
-            "command": "powershell.exe",
-            "args": [
-                "-NoLogo",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                "${workspaceFolder}/scripts/meson/vscode-windows.ps1",
-                "-Action",
-                "build",
-                "-BuildType",
-                "debug",
-                "-Architecture",
-                "x86_64"
-            ],
+            "command": "${workspaceFolder}/.build/meson-macos-arm64-release/TPC_Qt.app/Contents/MacOS/TPC_Qt",
+            "dependsOn": "Meson: build Release macOS ARM64",
             "options": {
-                "cwd": "${workspaceFolder}",
-                "env": {
-                    "QT_ROOT": "${config:tpc.qtRoot}",
-                    "VCPKG_ROOT": "${config:tpc.vcpkgRoot}"
-                }
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Meson: build Debug (native)",
+            "dependsOn": [
+                "Meson: build Debug x64"
+            ],
+            "osx": {
+                "dependsOn": [
+                    "Meson: build Debug macOS ARM64"
+                ]
             },
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            },
-            "osx": {
-                "command": "/bin/sh",
-                "args": [
-                    "${workspaceFolder}/scripts/meson/vscode-macos.sh",
-                    "build",
-                    "debug"
-                ],
-                "options": {
-                    "cwd": "${workspaceFolder}",
-                    "env": {
-                        "QT_ROOT": "${config:tpc.qtRootMacos}",
-                        "VCPKG_ROOT": "${config:tpc.vcpkgRootMacos}"
-                    }
-                },
-                "problemMatcher": "$gcc"
-            }
+            "problemMatcher": []
         }
     ]
 }

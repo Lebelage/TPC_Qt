@@ -10,23 +10,10 @@ project(
   ],
 )
 
-eigen_dep = dependency(
-  'Eigen3',
-  method: 'cmake',
-  modules: ['Eigen3::Eigen'],
-)
-
-open62541pp_dep = dependency(
-  'open62541pp',
-  method: 'cmake',
-  modules: ['open62541pp::open62541pp'],
-)
-
-stdexec_dep = dependency(
-  'stdexec',
-  method: 'cmake',
-  modules: ['STDEXEC::stdexec'],
-)
+# The parent supplies these dependencies from its vcpkg installation.
+eigen_dep = dependency('Eigen3')
+open62541pp_dep = dependency('open62541pp')
+stdexec_dep = dependency('stdexec')
 
 tpc_inc = include_directories('include')
 tpc_cpp = meson.get_compiler('cpp')

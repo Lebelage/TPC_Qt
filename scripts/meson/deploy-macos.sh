@@ -11,8 +11,8 @@ case "$build_type" in debug|release) ;; *) echo "Invalid build type" >&2; exit 2
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 project_dir=$(CDPATH= cd -- "$script_dir/../.." && pwd)
 bundle_parent=$(CDPATH= cd -- "$(dirname -- "$bundle")" && pwd -P)
-build_root=$(CDPATH= cd -- "$project_dir/.build" && pwd -P)
-case "$bundle_parent" in "$build_root"/*) ;; *) echo "Bundle must be a generated .build output." >&2; exit 2 ;; esac
+executable_parent=$(CDPATH= cd -- "$(dirname -- "$executable")" && pwd -P)
+test "$bundle_parent" = "$executable_parent" || { echo "Bundle must be beside the built executable." >&2; exit 2; }
 test "$(basename -- "$bundle")" = TPC_Qt.app || { echo "Unexpected bundle name." >&2; exit 2; }
 bundle="$bundle_parent/TPC_Qt.app"
 test ! -L "$bundle" || { echo "Bundle must not be a symlink." >&2; exit 2; }

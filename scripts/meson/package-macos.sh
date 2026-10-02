@@ -5,6 +5,10 @@ bundle=$1
 architecture="${2:-arm64}"
 action="${3:-package}"
 case "$architecture" in arm64|x86_64) ;; *) echo "Unsupported architecture" >&2; exit 2 ;; esac
+if test "$#" -gt 3; then
+  shift 3
+  "$@"
+fi
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 project_dir=$(CDPATH= cd -- "$script_dir/../.." && pwd)
 test -f "$bundle/Contents/MacOS/TPC_Qt" || { echo "Build the application bundle first." >&2; exit 2; }

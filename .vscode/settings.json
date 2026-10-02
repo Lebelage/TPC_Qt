@@ -1,9 +1,4 @@
 {
-    "tpc.qtRoot": "C:\\Qt\\6.12.0\\msvc2022_64",
-    "tpc.qtRootArm64": "C:\\Qt\\6.12.0\\msvc2022_arm64",
-    "tpc.vcpkgRoot": "C:\\vcpkg",
-    "cmake.sourceDirectory": "C:/projects/TPC_Qt/subprojects/tpc_api",
     "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
-    "tpc.qtRootMacos": "",
-    "tpc.vcpkgRootMacos": ""
+    "cmake.sourceDirectory": "/Users/sonora/Dev/TPC/TPC_Qt/subprojects/tpc_api"
 }
