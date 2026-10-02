@@ -1,63 +1,40 @@
 fs = import('fs')
 configured_vcpkg_root = get_option('vcpkg_root')
 environment_vcpkg_root = ''
-if configured_vcpkg_root == ''
-  if build_machine.system() == 'windows'
-    env_probe = run_command(find_program('powershell.exe'), '-NoLogo', '-NoProfile',
-      '-Command', '[Environment]::GetEnvironmentVariable("VCPKG_ROOT")', check: true)
-  else
-    env_probe = run_command(find_program('sh'), '-c', 'printf %s "$VCPKG_ROOT"', check: true)
-  endif
-  environment_vcpkg_root = env_probe.stdout().strip()
+if build_machine.system() == 'windows'
+  env_probe = run_command(find_program('powershell.exe'), '-NoLogo', '-NoProfile',
+    '-Command', '[Environment]::GetEnvironmentVariable("VCPKG_ROOT")', check: true)
+else
+  env_probe = run_command(find_program('sh'), '-c', 'printf %s "$VCPKG_ROOT"', check: true)
 endif
+environment_vcpkg_root = env_probe.stdout().strip()
+
 vcpkg_name = build_machine.system() == 'windows' ? 'vcpkg.exe' : 'vcpkg'
-vcpkg = find_program(vcpkg_name, required: false)
-if not vcpkg.found() and configured_vcpkg_root != ''
-  vcpkg = find_program(configured_vcpkg_root / vcpkg_name, required: false)
+vcpkg_root = configured_vcpkg_root != '' \
+  ? configured_vcpkg_root \
+  : environment_vcpkg_root
+if vcpkg_root != ''
+  vcpkg = find_program(vcpkg_root / vcpkg_name, required: false)
+else
+  vcpkg = disabler()
 endif
-if not vcpkg.found() and environment_vcpkg_root != ''
-  vcpkg = find_program(environment_vcpkg_root / vcpkg_name, required: false)
+if not vcpkg.found()
+  vcpkg = find_program(vcpkg_name, required: false)
 endif
 if not vcpkg.found()
   error('vcpkg was not found in PATH. Install it or set VCPKG_ROOT.')
 endif
 
-# A package manager may install only the vcpkg executable. vcpkg still needs
-# its scripts and ports checkout. Keep the project's registry checkout isolated
-# from a possibly stale system VCPKG_ROOT. Only the explicit Meson option opts
-# into using and managing an external checkout.
-managed_vcpkg_root = configured_vcpkg_root == ''
-vcpkg_root = managed_vcpkg_root \
-  ? meson.project_source_root() / '.build/vcpkg-root' \
-  : configured_vcpkg_root
-
-if managed_vcpkg_root
-  manifest_text = fs.read('../vcpkg.json')
-  baseline_parts = manifest_text.split('"builtin-baseline"')
-  if baseline_parts.length() != 2
-    error('vcpkg.json must contain exactly one builtin-baseline.')
-  endif
-  baseline = baseline_parts[1].split('"')[1]
-
-  git = find_program('git')
-  if not fs.is_dir(vcpkg_root / '.git')
-    message('Preparing the vcpkg checkout in ' + vcpkg_root)
-    run_command(git, 'init', vcpkg_root, check: true)
-  endif
-  checkout = run_command(git, '-C', vcpkg_root, 'rev-parse', 'HEAD', check: false)
-  if checkout.returncode() != 0 or checkout.stdout().strip() != baseline
-    message('Downloading vcpkg registry files for baseline ' + baseline)
-    run_command(git, '-C', vcpkg_root, 'fetch', '--depth=1',
-      'https://github.com/microsoft/vcpkg.git', baseline, check: true)
-    run_command(git, '-C', vcpkg_root, 'checkout', '--detach', 'FETCH_HEAD', check: true)
-  endif
+# A regular cloned vcpkg checkout keeps its executable at the root. This lets
+# PATH-only installations work without another project setting.
+if vcpkg_root == ''
+  vcpkg_root = fs.parent(vcpkg.full_path())
 endif
 
 if not fs.exists(vcpkg_root / '.vcpkg-root')
-  error('VCPKG_ROOT is not a vcpkg checkout: ' + vcpkg_root)
+  error('The detected vcpkg executable has no complete checkout at ' + vcpkg_root +
+    '. Set VCPKG_ROOT or -Dvcpkg_root to a cloned vcpkg repository.')
 endif
-vcpkg_env = environment()
-vcpkg_env.set('VCPKG_ROOT', vcpkg_root)
 
 if host_machine.cpu_family() == 'aarch64'
   target_arch = 'arm64'
@@ -92,8 +69,7 @@ install = run_command(vcpkg, '--vcpkg-root=' + vcpkg_root, 'install',
   '--x-manifest-root=' + meson.project_source_root(),
   '--x-install-root=' + install_root,
   '--overlay-triplets=' + meson.current_source_dir() / 'triplets',
-  '--triplet=' + triplet, '--host-triplet=' + host_triplet,
-  env: vcpkg_env, check: false)
+  '--triplet=' + triplet, '--host-triplet=' + host_triplet, check: false)
 if install.returncode() != 0
   error('vcpkg install failed:\n' + install.stdout() + install.stderr())
 endif
