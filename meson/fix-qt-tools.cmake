@@ -1,5 +1,5 @@
-# Post-portfile hook for the vcpkg revision pinned in vcpkg.json. Fix tool
-# relocation before dependent Qt ports invoke moc/rcc/qsb from this package.
+# Fix tool relocation before dependent Qt ports invoke moc/rcc/qsb from this
+# package.
 find_program(TPC_QT_FIXUP_PYTHON NAMES python3 REQUIRED)
 execute_process(
     COMMAND "${TPC_QT_FIXUP_PYTHON}"
