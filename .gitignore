@@ -1,0 +1,23 @@
+# CMake and vcpkg output
+/.build/
+/build/
+/cmake-build-*/
+/out/
+/vcpkg_installed/
+/compile_commands.json
+
+# IDE-local state
+/.idea/
+/.qtcreator/
+*.user
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+*.swp
+
+# Meson artifacts left by an optional subproject checkout
+/subprojects/.wraplock
+/subprojects/tpc_api/.meson-subproject-wrap-hash.txt
