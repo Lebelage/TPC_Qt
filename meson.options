@@ -1,1 +1,2 @@
 option('vcpkg_root', type: 'string', value: '', description: 'Optional vcpkg checkout; otherwise use VCPKG_ROOT or PATH')
+option('vcpkg_install_root', type: 'string', value: '', description: 'Optional vcpkg package directory; otherwise prefer ./vcpkg_installed and then <vcpkg_root>/installed')

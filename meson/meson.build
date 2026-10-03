@@ -58,9 +58,19 @@ host_arch = build_machine.cpu_family() == 'aarch64' ? 'arm64' : 'x64'
 host_platform = build_machine.system() == 'darwin' ? 'osx' : 'windows'
 triplet = vcpkg_arch + '-' + vcpkg_platform
 host_triplet = host_arch + '-' + host_platform
-# Reuse packages already installed by the selected vcpkg checkout. vcpkg keeps
-# release and debug artifacts for a triplet together under this prefix.
-install_root = vcpkg_root / 'installed'
+# Prefer a manifest-mode installation stored beside the project. This directory
+# is ignored by Git, so the source tree remains portable while every checkout
+# can use its own platform-specific dependencies. Existing shared vcpkg
+# installations continue to work as a fallback.
+configured_install_root = get_option('vcpkg_install_root')
+project_install_root = meson.project_source_root() / 'vcpkg_installed'
+if configured_install_root != ''
+  install_root = configured_install_root
+elif fs.is_dir(project_install_root / triplet)
+  install_root = project_install_root
+else
+  install_root = vcpkg_root / 'installed'
+endif
 dependency_prefix = install_root / triplet
 host_prefix = install_root / host_triplet
 if not fs.is_dir(dependency_prefix)
@@ -107,8 +117,12 @@ elif build_machine.system() == 'windows'
   qtpaths_path = meson.current_build_dir() / 'qtpaths.exe'
 endif
 summary({
+  'Build profile': get_option('buildtype'),
+  'Target system': host_machine.system(),
+  'Target architecture': target_arch,
   'vcpkg': vcpkg.full_path(),
   'vcpkg root': vcpkg_root,
+  'vcpkg install root': install_root,
   'Target triplet': triplet,
   'Dependencies': dependency_prefix,
 }, section: 'Managed dependencies')

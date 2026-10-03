@@ -6,16 +6,18 @@ project(
   default_options: [
     'cpp_std=c++23,c++latest',
     'warning_level=2',
+    'b_ndebug=if-release',
   ],
 )
 
 subdir('meson')
 
+is_debug_build = get_option('buildtype') == 'debug'
 qt_modules = ['Core', 'Concurrent', 'Gui', 'Qml', 'Quick', 'QuickControls2', 'Widgets']
 qt_include_args = ['-I' + dependency_prefix / 'include/Qt6']
 qt_link_args = []
-qt_compile_args = get_option('debug') ? [] : ['-DQT_NO_DEBUG']
-qt_libdir = dependency_prefix / (get_option('buildtype') == 'debug' ? 'debug/lib' : 'lib')
+qt_compile_args = is_debug_build ? [] : ['-DQT_NO_DEBUG']
+qt_libdir = dependency_prefix / (is_debug_build ? 'debug/lib' : 'lib')
 if host_machine.system() == 'darwin'
   qt_include_args += '-F' + qt_libdir
 endif
@@ -30,7 +32,7 @@ foreach module : qt_modules
     qt_link_args += framework / ('Qt' + module)
     qt_include_args += '-I' + framework / 'Headers'
   else
-    suffix = get_option('buildtype') == 'debug' ? 'd' : ''
+    suffix = is_debug_build ? 'd' : ''
     library = qt_libdir / ('Qt6' + module + suffix + '.lib')
     if not fs.is_file(library)
       error('Missing vcpkg Qt library: ' + library)
@@ -47,7 +49,7 @@ if host_machine.system() == 'windows'
 endif
 qt6_dep = declare_dependency(compile_args: qt_include_args + qt_compile_args, link_args: qt_link_args)
 
-qt_build_rpath = dependency_prefix / (get_option('buildtype') == 'debug' ? 'debug/lib' : 'lib')
+qt_build_rpath = dependency_prefix / (is_debug_build ? 'debug/lib' : 'lib')
 qt_install_rpath = host_machine.system() == 'darwin' ? '@executable_path/../Frameworks' : ''
 nlohmann_json_dep = dependency('nlohmann_json', method: 'cmake',
   modules: ['nlohmann_json::nlohmann_json'], cmake_args: managed_cmake_args, required: true)
@@ -145,7 +147,7 @@ if host_machine.system() == 'windows'
       command: deploy_command,
       depends: tpc_qt,
     )
-    if get_option('buildtype') == 'release'
+    if not is_debug_build
       run_target('package', command: deploy_command + ['-Package', '-Archive'], depends: tpc_qt)
     endif
   endif
@@ -169,10 +171,10 @@ elif host_machine.system() == 'darwin'
         meson.project_build_root() / 'TPC_Qt.app',
         meson.project_source_root() / 'qml',
         macdeployqt,
-        get_option('buildtype'),
+        is_debug_build ? 'debug' : 'release',
       ]
     run_target('deploy', command: deploy_command, depends: tpc_qt)
-    if get_option('buildtype') == 'release'
+    if not is_debug_build
       run_target('package', command: [find_program('scripts/meson/package-macos.sh'),
         meson.project_build_root() / 'TPC_Qt.app', target_arch, 'package'] + deploy_command, depends: tpc_qt)
     endif

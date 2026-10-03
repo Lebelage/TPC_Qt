@@ -28,7 +28,6 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<tpc_qt::views::FieldSliceItem>("TPC.Native", 1, 0, "FieldSliceItem");
     QCoreApplication::setOrganizationName("TPC");
     QCoreApplication::setApplicationName("TPC_Qt");
-
     const QDir settings_directory{QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)};
     const auto settings_path = toFilesystemPath(settings_directory.filePath("settings.json"));
     const auto legacy_settings_path = std::filesystem::current_path() / "Settings" / "settings.json";

@@ -8,7 +8,8 @@
             "args": [
                 "setup",
                 "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-debug",
-                "--buildtype=debug",
+                "--native-file",
+                "${workspaceFolder}/meson/profiles/debug.ini",
                 "--cross-file",
                 "${workspaceFolder}/meson/cross/windows-${input:windowsArch}.ini"
             ],
@@ -40,7 +41,8 @@
             "args": [
                 "setup",
                 "${workspaceFolder}/.build/meson-windows-${input:windowsArch}-release",
-                "--buildtype=release",
+                "--native-file",
+                "${workspaceFolder}/meson/profiles/release.ini",
                 "--cross-file",
                 "${workspaceFolder}/meson/cross/windows-${input:windowsArch}.ini"
             ],
@@ -78,7 +80,7 @@
             "label": "Meson: configure macOS Debug",
             "type": "process",
             "command": "meson",
-            "args": ["setup", "${workspaceFolder}/.build/meson-macos-native-debug", "--buildtype=debug"],
+            "args": ["setup", "${workspaceFolder}/.build/meson-macos-native-debug", "--native-file", "${workspaceFolder}/meson/profiles/debug.ini"],
             "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": []
         },
@@ -104,7 +106,7 @@
             "label": "Meson: configure macOS Release",
             "type": "process",
             "command": "meson",
-            "args": ["setup", "${workspaceFolder}/.build/meson-macos-native-release", "--buildtype=release"],
+            "args": ["setup", "${workspaceFolder}/.build/meson-macos-native-release", "--native-file", "${workspaceFolder}/meson/profiles/release.ini"],
             "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": []
         },
