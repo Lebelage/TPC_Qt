@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.4)
+cmake_minimum_required(VERSION 3.25)
 
 project(TPC_Qt
         VERSION 0.1
@@ -13,9 +13,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(TPC_QT_EXPORT_COMPILE_COMMANDS "Generate compile_commands.json" ON)
 option(TPC_QT_COMPACT_RELEASE "Optimize Release builds for minimum size" OFF)
-option(TPC_QT_DEPLOY_RUNTIME "Copy the Qt runtime next to the Windows executable" OFF)
-set(TPC_QT_OUTPUT_DIR "" CACHE PATH "Directory for the built application")
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS "${TPC_QT_EXPORT_COMPILE_COMMANDS}")
 
 find_package(Qt6 REQUIRED COMPONENTS
@@ -60,26 +57,12 @@ file(GLOB_RECURSE QML_FILES
 # TPC API
 # ============================================================
 
-# Development builds can consume a TPC_API source checkout. Packaged/CI builds
-# can instead provide an installed TPC package through CMAKE_PREFIX_PATH.
+# The bundled source tree makes a checkout self-contained on every platform.
+# An installed TPC package or another source checkout can still be selected for
+# package-maintainer workflows.
 option(TPC_QT_USE_INSTALLED_TPC "Require an installed TPC CMake package" OFF)
-set(TPC_API_DIR "" CACHE PATH "Optional path to the TPC_API source tree")
-
-if(NOT TPC_QT_USE_INSTALLED_TPC AND NOT TPC_API_DIR)
-    get_filename_component(_tpc_home "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
-    set(_tpc_api_candidates
-            "$ENV{TPC_API_DIR}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/../TPC_API"
-            "${_tpc_home}/dev/projects/TPC_API"
-    )
-
-    foreach(_candidate IN LISTS _tpc_api_candidates)
-        if(_candidate AND EXISTS "${_candidate}/CMakeLists.txt")
-            set(TPC_API_DIR "${_candidate}" CACHE PATH "Optional path to the TPC_API source tree" FORCE)
-            break()
-        endif()
-    endforeach()
-endif()
+set(TPC_API_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subprojects/tpc_api"
+        CACHE PATH "Path to the TPC_API source tree")
 
 if(TPC_QT_USE_INSTALLED_TPC)
     find_package(TPC CONFIG REQUIRED)
@@ -88,8 +71,6 @@ elseif(TPC_API_DIR)
         message(FATAL_ERROR "TPC_API_DIR does not contain CMakeLists.txt: '${TPC_API_DIR}'")
     endif()
     add_subdirectory("${TPC_API_DIR}" "${CMAKE_BINARY_DIR}/TPC_API" EXCLUDE_FROM_ALL)
-else()
-    find_package(TPC CONFIG REQUIRED)
 endif()
 
 # ============================================================
@@ -103,12 +84,6 @@ qt_add_executable(TPC_Qt
 set_target_properties(TPC_Qt PROPERTIES
         CXX_SCAN_FOR_MODULES OFF
 )
-
-if(TPC_QT_OUTPUT_DIR)
-    set_target_properties(TPC_Qt PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${TPC_QT_OUTPUT_DIR}"
-    )
-endif()
 
 if(TPC_QT_COMPACT_RELEASE)
     set_property(TARGET TPC_Qt PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
@@ -201,10 +176,6 @@ if(TARGET open62541::open62541)
     target_link_libraries(TPC_Qt PRIVATE open62541::open62541)
 endif()
 
-# ============================================================
-# macOS
-# ============================================================
-
 set_target_properties(TPC_Qt PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_GUI_IDENTIFIER "org.tpc.controller"
@@ -225,9 +196,21 @@ endif()
 if(MSVC)
     target_compile_options(TPC_Qt
             PRIVATE
+            /bigobj
+            /Zc:__cplusplus
             /Zc:preprocessor
             /permissive-
     )
+
+    # TPC API is bundled as a subproject. Keep its MSVC language mode aligned
+    # with the application without carrying a platform-only fork of TPC API.
+    if(TARGET tpc_system)
+        target_compile_options(tpc_system PRIVATE
+                /bigobj
+                /Zc:__cplusplus
+                /Zc:preprocessor
+        )
+    endif()
 endif()
 
 # ============================================================
@@ -246,25 +229,3 @@ qt_generate_deploy_qml_app_script(
 )
 
 install(SCRIPT "${qt_deploy_script}")
-
-# ============================================================
-# Автоматический деплой DLL в папку сборки (Windows-only)
-# ============================================================
-if(WIN32 AND TPC_QT_DEPLOY_RUNTIME)
-    # Определяем, где лежит windeployqt, на основе пути к Qt6::Core
-    get_target_property(_qt_core_location Qt6::Core LOCATION)
-    get_filename_component(_qt_bin_dir "${_qt_core_location}" DIRECTORY)
-    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${_qt_bin_dir}")
-
-    if(WINDEPLOYQT_EXECUTABLE)
-        # Добавляем команду, которая выполнится СРАЗУ после компиляции TPC_Qt
-        add_custom_command(TARGET TPC_Qt POST_BUILD
-            COMMAND "${WINDEPLOYQT_EXECUTABLE}"
-                    "$<$<CONFIG:Debug>:--debug>$<$<NOT:$<CONFIG:Debug>>:--release>"
-                    --no-translations
-                    --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/qml"
-                    "$<TARGET_FILE:TPC_Qt>"
-            COMMENT "Running windeployqt to copy Qt DLLs and QML plugins..."
-        )
-    endif()
-endif()

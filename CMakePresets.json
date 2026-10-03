@@ -1,67 +1,121 @@
 {
-  "version": 10,
+  "version": 6,
   "cmakeMinimumRequired": {
-    "major": 4,
-    "minor": 4,
+    "major": 3,
+    "minor": 25,
     "patch": 0
   },
   "configurePresets": [
     {
-      "name": "base",
+      "name": "common",
       "hidden": true,
       "generator": "Ninja",
+      "warnings": {
+        "dev": true,
+        "deprecated": true,
+        "uninitialized": false,
+        "unusedCli": true,
+        "systemVars": false
+      },
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_PREFIX_PATH": "$env{QT_ROOT}",
         "BUILD_TESTING": "OFF",
-        "TPC_INSTALL": "OFF"
+        "TPC_INSTALL": "OFF",
+        "VCPKG_APPLOCAL_DEPS": "ON"
+      },
+      "environment": {
+        "VCPKG_DISABLE_METRICS": "1"
       }
     },
     {
+      "name": "macos",
+      "hidden": true,
+      "inherits": "common",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "environment": {
+        "VCPKG_ROOT": "$penv{HOME}/Tools/vcpkg",
+        "PATH": "/opt/homebrew/bin:$penv{PATH}"
+      },
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "/opt/homebrew/bin/ninja"
+      }
+    },
+    {
+      "name": "windows",
+      "hidden": true,
+      "inherits": "common",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+    },
+    {
       "name": "debug",
-      "displayName": "Debug",
-      "description": "Debug build; build metadata stays in .build/debug",
-      "inherits": "base",
+      "displayName": "Debug (macOS)",
+      "description": "Debug build with symbols and compile_commands.json",
+      "inherits": "macos",
       "binaryDir": "${sourceDir}/.build/debug",
+      "installDir": "${sourceDir}/out/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "TPC_QT_OUTPUT_DIR": "${sourceDir}/out/debug",
-        "TPC_QT_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
         "TPC_QT_COMPACT_RELEASE": "OFF",
-        "TPC_QT_DEPLOY_RUNTIME": "OFF"
+        "TPC_QT_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
       "name": "release",
-      "displayName": "Release (compact)",
-      "description": "Size-optimized Release; only the runnable application goes to out/release",
-      "inherits": "base",
+      "displayName": "Release (macOS)",
+      "description": "Size-optimized Release build with link-time optimization",
+      "inherits": "macos",
       "binaryDir": "${sourceDir}/.build/release",
+      "installDir": "${sourceDir}/out/release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-        "TPC_QT_OUTPUT_DIR": "${sourceDir}/out/release",
-        "TPC_QT_EXPORT_COMPILE_COMMANDS": "OFF",
         "TPC_QT_COMPACT_RELEASE": "ON",
-        "TPC_QT_DEPLOY_RUNTIME": "OFF"
+        "TPC_QT_EXPORT_COMPILE_COMMANDS": "OFF"
       }
     },
     {
-      "name": "release-portable",
-      "displayName": "Release (portable with Qt)",
-      "description": "Standalone Windows folder with the required Qt DLLs and QML modules",
-      "inherits": "release",
-      "binaryDir": "${sourceDir}/.build/release-portable",
+      "name": "windows-debug",
+      "displayName": "Debug (Windows)",
+      "description": "Debug build with symbols and compile_commands.json",
+      "inherits": "windows",
+      "binaryDir": "${sourceDir}/.build/windows-debug",
+      "installDir": "${sourceDir}/out/windows-debug",
       "cacheVariables": {
-        "TPC_QT_OUTPUT_DIR": "${sourceDir}/out/release-portable",
-        "TPC_QT_DEPLOY_RUNTIME": "ON"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
+        "TPC_QT_COMPACT_RELEASE": "OFF",
+        "TPC_QT_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Release (Windows)",
+      "description": "Size-optimized Release build with link-time optimization",
+      "inherits": "windows",
+      "binaryDir": "${sourceDir}/.build/windows-release",
+      "installDir": "${sourceDir}/out/windows-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+        "TPC_QT_COMPACT_RELEASE": "ON",
+        "TPC_QT_EXPORT_COMPILE_COMMANDS": "OFF"
       }
     }
   ],
   "buildPresets": [
     {
       "name": "debug",
-      "displayName": "Build Debug",
+      "displayName": "Build Debug (macOS)",
       "configurePreset": "debug",
       "targets": [
         "TPC_Qt"
@@ -69,18 +123,42 @@
     },
     {
       "name": "release",
-      "displayName": "Build compact Release",
+      "displayName": "Build Release (macOS)",
       "configurePreset": "release",
       "targets": [
         "TPC_Qt"
       ]
     },
     {
-      "name": "release-portable",
-      "displayName": "Build portable Release with Qt",
-      "configurePreset": "release-portable",
+      "name": "package",
+      "displayName": "Package Release (macOS)",
+      "configurePreset": "release",
+      "targets": [
+        "install"
+      ]
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Build Debug (Windows)",
+      "configurePreset": "windows-debug",
       "targets": [
         "TPC_Qt"
+      ]
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Build Release (Windows)",
+      "configurePreset": "windows-release",
+      "targets": [
+        "TPC_Qt"
+      ]
+    },
+    {
+      "name": "windows-package",
+      "displayName": "Package Release (Windows)",
+      "configurePreset": "windows-release",
+      "targets": [
+        "install"
       ]
     }
   ]
