@@ -1,8 +1,5 @@
 #pragma once
 
-#include <QImage>
-#include <QThreadPool>
-
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -10,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <stop_token>
+#include <thread>
 #include <vector>
 
 #include "models/application_settings_model.hpp"
@@ -17,7 +15,7 @@
 #include "services/scoped_subscription.hpp"
 #include "tpc/utilities/event_handler.hpp"
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 
 class EventDispatcher;
 class TpcService;
@@ -25,7 +23,9 @@ class TpcService;
 struct RenderedFieldSlice {
     static constexpr std::size_t induction_band_count = 10;
 
-    QImage image;
+    std::size_t width{};
+    std::size_t height{};
+    std::vector<std::uint8_t> rgba;
     std::vector<double> field;
     std::vector<std::uint8_t> valid;
     std::array<double, 2> u_range{};
@@ -54,14 +54,13 @@ private:
     void onFieldWasCalculated(bool success);
 
     TpcService& tpc_;
-    QThreadPool rendering_pool_;
     std::atomic<std::uint64_t> requested_generation_{0};
-    std::mutex request_mutex_;
-    std::stop_source active_request_;
+    std::mutex worker_mutex_;
+    std::jthread rendering_thread_;
     std::mutex geometry_mutex_;
     models::FieldGeometry geometry_;
     ScopedSubscription<const models::AppSettings&> settings_subscription_;
     ScopedSubscription<bool> calculation_subscription_;
 };
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

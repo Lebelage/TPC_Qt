@@ -10,7 +10,7 @@
 #include "services/scoped_subscription.hpp"
 #include "tpc/tpc.hpp"
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 namespace {
 
 [[nodiscard]] std::vector<tpc::analytics::models::Measurement> createMeasurements(
@@ -245,4 +245,4 @@ void TpcService::onFieldWasCalculated(bool is_calculated) {
     events_.field_was_calculated_.invoke(is_calculated);
 }
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

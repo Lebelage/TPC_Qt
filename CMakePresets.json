@@ -65,8 +65,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
-        "TPC_QT_COMPACT_RELEASE": "OFF",
-        "TPC_QT_EXPORT_COMPILE_COMMANDS": "ON"
+        "TPC_SLINT_COMPACT_RELEASE": "OFF",
+        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
@@ -79,8 +79,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-        "TPC_QT_COMPACT_RELEASE": "ON",
-        "TPC_QT_EXPORT_COMPILE_COMMANDS": "OFF"
+        "TPC_SLINT_COMPACT_RELEASE": "ON",
+        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "OFF"
       }
     },
     {
@@ -93,8 +93,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
-        "TPC_QT_COMPACT_RELEASE": "OFF",
-        "TPC_QT_EXPORT_COMPILE_COMMANDS": "ON"
+        "TPC_SLINT_COMPACT_RELEASE": "OFF",
+        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
@@ -107,8 +107,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-        "TPC_QT_COMPACT_RELEASE": "ON",
-        "TPC_QT_EXPORT_COMPILE_COMMANDS": "OFF"
+        "TPC_SLINT_COMPACT_RELEASE": "ON",
+        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "OFF"
       }
     }
   ],
@@ -118,7 +118,7 @@
       "displayName": "Build Debug (macOS)",
       "configurePreset": "debug",
       "targets": [
-        "TPC_Qt"
+        "TPC_Slint"
       ]
     },
     {
@@ -126,7 +126,7 @@
       "displayName": "Build Release (macOS)",
       "configurePreset": "release",
       "targets": [
-        "TPC_Qt"
+        "TPC_Slint"
       ]
     },
     {
@@ -142,7 +142,7 @@
       "displayName": "Build Debug (Windows)",
       "configurePreset": "windows-debug",
       "targets": [
-        "TPC_Qt"
+        "TPC_Slint"
       ]
     },
     {
@@ -150,7 +150,7 @@
       "displayName": "Build Release (Windows)",
       "configurePreset": "windows-release",
       "targets": [
-        "TPC_Qt"
+        "TPC_Slint"
       ]
     },
     {

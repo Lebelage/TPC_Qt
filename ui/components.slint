@@ -1,0 +1,181 @@
+import { Theme } from "theme.slint";
+
+export component Panel inherits Rectangle {
+    background: Theme.surface;
+    border-color: Theme.border;
+    border-width: 1px;
+    border-radius: 12px;
+}
+
+export component MutedLabel inherits Text {
+    color: Theme.text-muted;
+    font-size: 13px;
+    vertical-alignment: center;
+}
+
+export component AppButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: false;
+    in property <bool> active: true;
+    callback clicked();
+
+    min-width: 96px;
+    height: 40px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: root.primary ? Theme.accent : Theme.border-strong;
+    background: !root.active ? Theme.surface-raised
+        : touch.pressed ? (root.primary ? #416fd5 : #111823)
+        : touch.has-hover ? (root.primary ? Theme.accent-hover : Theme.surface-hover)
+        : root.primary ? Theme.accent : Theme.surface-raised;
+    opacity: root.active ? 1 : 0.46;
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-enabled: root.active;
+
+    Text {
+        text: root.text;
+        color: root.primary ? white : Theme.text;
+        font-size: 13px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        enabled: root.active;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component NavButton inherits Rectangle {
+    in property <string> text;
+    in property <string> symbol;
+    in property <bool> selected: false;
+    callback clicked();
+
+    height: 44px;
+    border-radius: 9px;
+    background: root.selected ? Theme.accent-soft : nav-touch.has-hover ? Theme.surface-hover : transparent;
+    accessible-role: button;
+    accessible-label: root.text;
+
+    Rectangle {
+        x: 0;
+        y: 8px;
+        width: 3px;
+        height: parent.height - 16px;
+        border-radius: 2px;
+        background: root.selected ? Theme.accent : transparent;
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 12px;
+        spacing: 11px;
+        Text {
+            text: root.symbol;
+            color: root.selected ? #a9c2ff : Theme.text-subtle;
+            font-size: 15px;
+            width: 22px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        Text {
+            text: root.text;
+            color: root.selected ? Theme.text : Theme.text-muted;
+            font-size: 14px;
+            font-weight: root.selected ? 600 : 500;
+            vertical-alignment: center;
+        }
+    }
+
+    nav-touch := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+export component DarkInput inherits Rectangle {
+    in-out property <string> text <=> editor.text;
+    in property <string> placeholder: "";
+    in property <bool> active: true;
+
+    height: 38px;
+    border-radius: 7px;
+    border-width: 1px;
+    border-color: editor.has-focus ? Theme.accent : Theme.border-strong;
+    background: Theme.canvas;
+    opacity: root.active ? 1 : 0.48;
+
+    if root.text == "": Text {
+        x: 12px;
+        width: parent.width - 24px;
+        height: parent.height;
+        text: root.placeholder;
+        color: Theme.text-subtle;
+        font-size: 13px;
+        vertical-alignment: center;
+    }
+
+    editor := TextInput {
+        x: 12px;
+        width: parent.width - 24px;
+        height: parent.height;
+        enabled: root.active;
+        color: Theme.text;
+        font-size: 13px;
+        single-line: true;
+        vertical-alignment: center;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: white;
+    }
+}
+
+export component MetricCard inherits Panel {
+    in property <string> label;
+    in property <string> value;
+    in property <string> detail;
+    in property <brush> value-color: Theme.text;
+
+    height: 88px;
+    VerticalLayout {
+        padding: 14px;
+        spacing: 3px;
+        Text { text: root.label; color: Theme.text-subtle; font-size: 11px; font-weight: 700; letter-spacing: 0.7px; }
+        Text { text: root.value; color: root.value-color; font-size: 20px; font-weight: 700; }
+        Text { text: root.detail; color: Theme.text-muted; font-size: 11px; }
+    }
+}
+
+export component StatusDot inherits Rectangle {
+    in property <bool> online;
+    width: 9px;
+    height: 9px;
+    border-radius: 5px;
+    background: root.online ? Theme.success : Theme.danger;
+}
+
+export component TableCell inherits Text {
+    color: Theme.text-muted;
+    font-family: "monospace";
+    font-size: 13px;
+    horizontal-alignment: center;
+    vertical-alignment: center;
+    overflow: elide;
+}
+
+export component FieldBadge inherits Rectangle {
+    in property <bool> ready;
+    width: ready ? 86px : 104px;
+    height: 26px;
+    border-radius: 13px;
+    background: ready ? Theme.success-soft : Theme.surface-raised;
+    Text {
+        text: root.ready ? "READY" : "NOT READY";
+        color: root.ready ? Theme.success : Theme.text-subtle;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.7px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}

@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace tpc_qt::application {
+namespace tpc_slint::application {
 
 ApplicationContext::ApplicationContext(
     std::filesystem::path settings_path,
@@ -11,8 +11,7 @@ ApplicationContext::ApplicationContext(
     : file_worker_(std::move(settings_path), std::move(legacy_settings_path)),
       settings_(events_, file_worker_),
       tpc_(events_),
-      field_slices_(events_, tpc_),
-      main_view_model_(events_, settings_, tpc_, field_slices_) {}
+      field_slices_(events_, tpc_) {}
 
 ApplicationContext::~ApplicationContext() {
     // Stop worker threads while all event subscribers are still alive.
@@ -24,8 +23,4 @@ std::expected<void, std::string> ApplicationContext::initialize() {
     return settings_.loadSettings();
 }
 
-view_models::MainViewModel& ApplicationContext::mainViewModel() noexcept {
-    return main_view_model_;
-}
-
-}  // namespace tpc_qt::application
+}  // namespace tpc_slint::application

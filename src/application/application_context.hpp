@@ -10,9 +10,8 @@
 #include "services/file_worker/file_worker.hpp"
 #include "services/settings_holder/settings_holder.hpp"
 #include "services/tpc_service/tpc_service.hpp"
-#include "viewmodel/MainViewModel.hpp"
 
-namespace tpc_qt::application {
+namespace tpc_slint::application {
 
 /**
  * Application composition root.
@@ -35,7 +34,10 @@ public:
     ~ApplicationContext();
 
     [[nodiscard]] std::expected<void, std::string> initialize();
-    [[nodiscard]] view_models::MainViewModel& mainViewModel() noexcept;
+    [[nodiscard]] services::EventDispatcher& events() noexcept { return events_; }
+    [[nodiscard]] services::SettingsHolderService& settings() noexcept { return settings_; }
+    [[nodiscard]] services::TpcService& tpc() noexcept { return tpc_; }
+    [[nodiscard]] services::FieldSliceService& fieldSlices() noexcept { return field_slices_; }
 
 private:
     services::EventDispatcher events_;
@@ -43,7 +45,6 @@ private:
     services::SettingsHolderService settings_;
     services::TpcService tpc_;
     services::FieldSliceService field_slices_;
-    view_models::MainViewModel main_view_model_;
 };
 
-}  // namespace tpc_qt::application
+}  // namespace tpc_slint::application

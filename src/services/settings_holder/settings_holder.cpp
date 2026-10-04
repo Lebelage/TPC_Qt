@@ -14,7 +14,7 @@
 #include "services/event_dispatcher/event_dispatcher.hpp"
 #include "services/file_worker/file_worker.hpp"
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 namespace {
 constexpr std::string_view kDefaultEndpoint = "opc.tcp://127.0.0.1:1234";
 constexpr int kDefaultPollingIntervalMs = 1000;
@@ -249,4 +249,4 @@ void SettingsHolderService::onInitializationDataReceived(std::vector<models::Sen
     applySettings();
 }
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

@@ -14,7 +14,7 @@
 #include "models/field_slice_model.hpp"
 #include "models/tpc_data_model.hpp"
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 
 class EventDispatcher;
 struct TpcServiceBackend;
@@ -67,4 +67,4 @@ private:
     std::unique_ptr<TpcServiceBackend> backend_;
 };
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

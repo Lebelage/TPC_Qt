@@ -7,7 +7,7 @@
 #include <system_error>
 #include <utility>
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 namespace fs = std::filesystem;
 
 FileWorker::FileWorker(fs::path settings_path, std::optional<fs::path> legacy_settings_path)
@@ -65,4 +65,4 @@ void FileWorker::initialize(const std::optional<fs::path>& legacy_settings_path)
     }
 }
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

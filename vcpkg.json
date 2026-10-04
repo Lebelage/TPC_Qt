@@ -1,31 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-  "name": "tpc-qt",
+  "name": "tpc-slint",
   "version-semver": "0.1.0",
-  "description": "Cross-platform Qt frontend for TPC",
+  "description": "Cross-platform Slint frontend for TPC",
   "builtin-baseline": "3aea538b2bb21a586502c67b00eb474fdd2e3098",
   "dependencies": [
     "eigen3",
     "nlohmann-json",
     "open62541pp",
-    {
-      "name": "qtbase",
-      "default-features": false,
-      "features": [
-        "concurrent",
-        "gui",
-        "widgets"
-      ]
-    },
-    {
-      "name": "qtbase",
-      "default-features": false,
-      "features": [
-        "windeployqt"
-      ],
-      "platform": "windows"
-    },
-    "qtdeclarative",
     "stdexec"
   ]
 }

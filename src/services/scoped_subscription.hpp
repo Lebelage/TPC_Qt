@@ -4,7 +4,7 @@
 
 #include "tpc/utilities/event_handler.hpp"
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 
 /**
  * Owns one event-handler subscription and removes it on destruction.
@@ -48,4 +48,4 @@ private:
     typename Event::Id id_{0};
 };
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

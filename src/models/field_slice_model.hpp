@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace tpc_qt::models {
+namespace tpc_slint::models {
 
 struct FieldGeometry {
     double radius{};
@@ -22,4 +22,4 @@ struct NumericFieldSlice {
     std::vector<std::uint8_t> valid;
 };
 
-}  // namespace tpc_qt::models
+}  // namespace tpc_slint::models

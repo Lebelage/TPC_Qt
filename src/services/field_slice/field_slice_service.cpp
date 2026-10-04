@@ -1,7 +1,5 @@
 #include "services/field_slice/field_slice_service.hpp"
 
-#include <QtConcurrentRun>
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -10,10 +8,10 @@
 #include "services/event_dispatcher/event_dispatcher.hpp"
 #include "services/tpc_service/tpc_service.hpp"
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 namespace {
 
-[[nodiscard]] QRgb viridis(double normalized) {
+[[nodiscard]] std::array<std::uint8_t, 3> viridis(double normalized) {
     static constexpr std::array<std::array<double, 3>, 6> colors{{
         {0.267, 0.005, 0.329}, {0.254, 0.265, 0.530}, {0.164, 0.471, 0.558},
         {0.135, 0.659, 0.518}, {0.478, 0.821, 0.318}, {0.993, 0.906, 0.144}
@@ -23,9 +21,11 @@ namespace {
     const auto index = std::min(static_cast<std::size_t>(scaled), colors.size() - 2);
     const double amount = scaled - static_cast<double>(index);
     const auto channel = [&](std::size_t component) {
-        return static_cast<int>(255.0 * std::lerp(colors[index][component], colors[index + 1][component], amount));
+        return static_cast<std::uint8_t>(255.0 * std::lerp(
+            colors[index][component], colors[index + 1][component], amount
+        ));
     };
-    return qRgb(channel(0), channel(1), channel(2));
+    return {channel(0), channel(1), channel(2)};
 }
 
 [[nodiscard]] std::shared_ptr<const RenderedFieldSlice> renderSlice(
@@ -41,8 +41,9 @@ namespace {
     }
 
     auto result = std::make_shared<RenderedFieldSlice>();
-    result->image = QImage(static_cast<int>(width), static_cast<int>(height), QImage::Format_ARGB32_Premultiplied);
-    result->image.fill(Qt::transparent);
+    result->width = width;
+    result->height = height;
+    result->rgba.assign(pixel_count * 4, 0);
     result->field = std::move(slice.field);
     result->valid = std::move(slice.valid);
     result->u_range = slice.horizontal_bounds;
@@ -67,54 +68,47 @@ namespace {
 
     const double value_span = result->maximum_value - result->minimum_value;
     std::vector<std::uint8_t> induction_bands(pixel_count);
-    for (std::size_t y = 0; y < height; ++y) {
+    for (std::size_t pixel = 0; pixel < pixel_count; ++pixel) {
         if (stop_token.stop_requested()) {
             return {};
         }
-        auto* scan_line = reinterpret_cast<QRgb*>(result->image.scanLine(static_cast<int>(y)));
-        for (std::size_t x = 0; x < width; ++x) {
-            const std::size_t pixel = y * width + x;
-            if (!result->valid[pixel]) {
-                continue;
-            }
-            const std::size_t offset = pixel * 3;
-            const double value = std::hypot(
-                result->field[offset], result->field[offset + 1], result->field[offset + 2]
-            );
-            const double normalized = value_span > 0.0
-                ? (value - result->minimum_value) / value_span
-                : 0.5;
-            scan_line[x] = viridis(normalized);
-            induction_bands[pixel] = static_cast<std::uint8_t>(std::min(
-                static_cast<std::size_t>(
-                    normalized * static_cast<double>(RenderedFieldSlice::induction_band_count)
-                ),
-                RenderedFieldSlice::induction_band_count - 1
-            ));
+        if (!result->valid[pixel]) {
+            continue;
         }
+        const std::size_t field_offset = pixel * 3;
+        const double value = std::hypot(
+            result->field[field_offset], result->field[field_offset + 1], result->field[field_offset + 2]
+        );
+        const double normalized = value_span > 0.0
+            ? (value - result->minimum_value) / value_span
+            : 0.5;
+        const auto color = viridis(normalized);
+        const std::size_t rgba_offset = pixel * 4;
+        result->rgba[rgba_offset] = color[0];
+        result->rgba[rgba_offset + 1] = color[1];
+        result->rgba[rgba_offset + 2] = color[2];
+        result->rgba[rgba_offset + 3] = 255;
+        induction_bands[pixel] = static_cast<std::uint8_t>(std::min(
+            static_cast<std::size_t>(normalized * RenderedFieldSlice::induction_band_count),
+            RenderedFieldSlice::induction_band_count - 1
+        ));
     }
 
-    // Draw one-pixel isolines where neighbouring samples enter another
-    // induction range. Darkening the existing colour keeps the contour
-    // readable across the whole viridis palette without hiding field data.
     for (std::size_t y = 0; y < height; ++y) {
-        auto* scan_line = reinterpret_cast<QRgb*>(result->image.scanLine(static_cast<int>(y)));
         for (std::size_t x = 0; x < width; ++x) {
             const std::size_t pixel = y * width + x;
             if (!result->valid[pixel]) {
                 continue;
             }
-            const bool crosses_horizontal_boundary = x > 0 && result->valid[pixel - 1]
+            const bool horizontal = x > 0 && result->valid[pixel - 1]
                 && induction_bands[pixel] != induction_bands[pixel - 1];
-            const bool crosses_vertical_boundary = y > 0 && result->valid[pixel - width]
+            const bool vertical = y > 0 && result->valid[pixel - width]
                 && induction_bands[pixel] != induction_bands[pixel - width];
-            if (crosses_horizontal_boundary || crosses_vertical_boundary) {
-                const QRgb color = scan_line[x];
-                scan_line[x] = qRgb(
-                    qRed(color) * 2 / 5,
-                    qGreen(color) * 2 / 5,
-                    qBlue(color) * 2 / 5
-                );
+            if (horizontal || vertical) {
+                const std::size_t offset = pixel * 4;
+                result->rgba[offset] = static_cast<std::uint8_t>(result->rgba[offset] * 2 / 5);
+                result->rgba[offset + 1] = static_cast<std::uint8_t>(result->rgba[offset + 1] * 2 / 5);
+                result->rgba[offset + 2] = static_cast<std::uint8_t>(result->rgba[offset + 2] * 2 / 5);
             }
         }
     }
@@ -124,7 +118,6 @@ namespace {
 }  // namespace
 
 FieldSliceService::FieldSliceService(EventDispatcher& events, TpcService& tpc) : tpc_(tpc) {
-    rendering_pool_.setMaxThreadCount(1);
     settings_subscription_.subscribe(
         events.settings_changed,
         [this](const models::AppSettings& settings) { onSettingsChanged(settings); }
@@ -141,20 +134,14 @@ FieldSliceService::~FieldSliceService() {
 
 void FieldSliceService::dispose() noexcept {
     requested_generation_.fetch_add(1);
-    {
-        std::scoped_lock lock{request_mutex_};
-        active_request_.request_stop();
+    std::scoped_lock lock{worker_mutex_};
+    if (rendering_thread_.joinable()) {
+        rendering_thread_.request_stop();
+        rendering_thread_.join();
     }
-    rendering_pool_.clear();
-    rendering_pool_.waitForDone();
 }
 
-void FieldSliceService::requestSlice(
-    int axis,
-    double coordinate,
-    int viewport_width,
-    int viewport_height
-) {
+void FieldSliceService::requestSlice(int axis, double coordinate, int viewport_width, int viewport_height) {
     viewport_width = std::clamp(viewport_width, 128, 1024);
     viewport_height = std::clamp(viewport_height, 128, 1024);
     models::FieldGeometry geometry;
@@ -178,31 +165,27 @@ void FieldSliceService::requestSlice(
     } else {
         grid_width = 2;
     }
-    const std::uint64_t generation = requested_generation_.fetch_add(1) + 1;
-    std::stop_token stop_token;
-    {
-        std::scoped_lock lock{request_mutex_};
-        active_request_.request_stop();
-        active_request_ = std::stop_source{};
-        stop_token = active_request_.get_token();
-    }
 
-    (void)QtConcurrent::run(&rendering_pool_, [
-        this, axis, coordinate, grid_width, grid_height, generation, stop_token
-    ] {
+    const std::uint64_t generation = requested_generation_.fetch_add(1) + 1;
+    std::scoped_lock lock{worker_mutex_};
+    if (rendering_thread_.joinable()) {
+        rendering_thread_.request_stop();
+        rendering_thread_.join();
+    }
+    rendering_thread_ = std::jthread([
+        this, axis, coordinate, grid_width, grid_height, generation
+    ](std::stop_token stop_token) {
         auto numeric_slice = tpc_.calculateFieldSlice(
             axis,
             coordinate,
             {static_cast<std::size_t>(grid_width), static_cast<std::size_t>(grid_height)},
             stop_token
         );
-        if (!numeric_slice || stop_token.stop_requested()
-            || requested_generation_.load() != generation) {
+        if (!numeric_slice || stop_token.stop_requested() || requested_generation_.load() != generation) {
             return;
         }
         auto rendered = renderSlice(std::move(*numeric_slice), stop_token);
-        if (rendered && !stop_token.stop_requested()
-            && requested_generation_.load() == generation) {
+        if (rendered && !stop_token.stop_requested() && requested_generation_.load() == generation) {
             slice_rendered.invoke(std::move(rendered));
         }
     });
@@ -229,4 +212,4 @@ void FieldSliceService::onFieldWasCalculated(bool success) {
     field_available.invoke(geometry);
 }
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

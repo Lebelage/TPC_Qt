@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace tpc_qt::models {
+namespace tpc_slint::models {
 
 enum class SensorNameKey : char { W = 'W', E = 'E' };
 enum class SensorNameComponent : std::size_t { R, F, Z };
@@ -171,4 +171,4 @@ private:
     double radius_{};
 };
 
-}  // namespace tpc_qt::models
+}  // namespace tpc_slint::models

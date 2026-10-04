@@ -6,7 +6,7 @@
 #include <optional>
 #include <string>
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 
 /** Persists the settings JSON at an explicitly configured application path. */
 class FileWorker final {
@@ -31,4 +31,4 @@ private:
     mutable std::mutex mutex_;
 };
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

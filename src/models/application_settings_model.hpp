@@ -6,7 +6,7 @@
 
 #include "models/tpc_data_model.hpp"
 #include "nlohmann/json.hpp"
-namespace tpc_qt::models {
+namespace tpc_slint::models {
 /** Persisted coordinates for one physical sensor. */
 struct SensorInfo {
     SensorName name{};
@@ -48,4 +48,4 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ConnectionParameters, endpoint, 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TpcGeometryParams, length, radius)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings, geometry, connection, sensors_info, grid)
-}  // namespace tpc_qt::models
+}  // namespace tpc_slint::models

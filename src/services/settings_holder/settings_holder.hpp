@@ -10,7 +10,7 @@
 #include "models/application_settings_model.hpp"
 #include "services/scoped_subscription.hpp"
 
-namespace tpc_qt::services {
+namespace tpc_slint::services {
 
 class EventDispatcher;
 class FileWorker;
@@ -53,4 +53,4 @@ private:
     ScopedSubscription<std::vector<models::SensorName>> initialization_subscription_;
 };
 
-}  // namespace tpc_qt::services
+}  // namespace tpc_slint::services

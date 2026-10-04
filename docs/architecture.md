@@ -1,70 +1,74 @@
-# TPC Qt architecture
+# TPC Slint architecture
 
 ## Dependency direction
 
 ```text
-QML views
-    -> View models
+Slint components (ui/app.slint)
+    -> ApplicationPresenter (src/ui)
         -> Application services
             -> Domain models
             -> TPC_API
-            -> File system / Qt dialogs
+            -> File system
 ```
 
-Dependencies must not point back toward QML. Domain models must not include Qt
-types. View models may expose Qt types, but do not perform file, network, or
-field-calculation work themselves.
+The `.slint` layer contains presentation and interaction declarations only.
+The generated Slint API is isolated in `ApplicationPresenter`, which translates
+UI callbacks and background service events. `main.cpp` only composes the
+context, windows, and presenter. Domain models and services do not include
+Slint types.
 
 ## Composition and lifetime
 
 `application::ApplicationContext` is the composition root. It owns the event
-dispatcher, persistence, services, and view models in dependency order. New
-long-lived services must be constructed there and passed explicitly to their
-consumers. Do not add process-wide `instance()` accessors.
+dispatcher, persistence, and TPC/field services in dependency order. The
+presenter owns UI event subscriptions and is destroyed before the context.
 
-Initial settings are loaded only after all subscribers have been constructed.
-Background TPC workers are stopped before the event dispatcher and view models
-are destroyed.
+Initial settings are loaded after every subscriber is registered. Background
+TPC and slice-rendering workers are stopped before the event dispatcher is
+destroyed. Worker callbacks use `slint::invoke_from_event_loop` before touching
+generated UI objects.
 
 ## Source areas
 
+- `ui`: declarative Slint presentation, reusable controls, and theme tokens.
 - `src/application`: process composition and application lifetime.
-- `src/models`: Qt-independent application/domain data where possible.
-- `src/services`: application workflows and infrastructure adapters.
-- `src/viewmodel`: state and commands exposed to QML.
-- `qml`: presentation only; no persistence, network, or analytics logic.
-
-As the project grows, services should be split by responsibility rather than
-forming one large controller. In particular, field visualization should use a
-dedicated field-slice service and view model instead of expanding
-`WorkspaceViewModel` indefinitely.
+- `src/models`: toolkit-independent application and domain data.
+- `src/services`: application workflows, persistence, TPC integration, and
+  field-slice rendering.
+- `src/ui`: the narrow adapter between generated Slint types and services.
+- `src/main.cpp`: minimal process entry point.
 
 ## TPC_API boundary
 
-`TpcService.cpp` is the adapter for the external TPC library. Application
-models and view models must not include `tpc/system/*` or analytics headers.
-The adapter consumes the public `<tpc/tpc.hpp>` header and translates backend
-events into application-owned event types.
+`TpcService.cpp` is the adapter for the external TPC library. Other application
+areas do not include TPC system or analytics implementation headers. The
+adapter consumes `<tpc/tpc.hpp>` and translates backend events into
+application-owned event types.
 
-Development builds may add a `TPC_API` source checkout with `TPC_API_DIR`.
-Release and CI builds may consume an installed package with `find_package(TPC
-CONFIG)` by setting `TPC_QT_USE_INSTALLED_TPC=ON`. Both modes link only the
-public `TPC::TPC` target.
+Development builds use the bundled checkout selected by `TPC_API_DIR`. Release
+and CI builds may use `find_package(TPC CONFIG)` by setting
+`TPC_SLINT_USE_INSTALLED_TPC=ON`. Both modes link the public `TPC::TPC` target.
 
 ## Settings
 
-Settings are stored below `QStandardPaths::AppConfigLocation`. On first launch,
-the legacy `Settings/settings.json` file is copied to the new location when it
-exists. Packaged applications must not write beside the executable.
+Settings use the platform configuration directory:
 
-## Packaging
+- macOS: `~/Library/Application Support/TPC/TPC_Slint/settings.json`;
+- Windows: `%APPDATA%/TPC/TPC_Slint/settings.json`;
+- Linux: `$XDG_CONFIG_HOME/TPC_Slint/settings.json` or
+  `~/.config/TPC_Slint/settings.json`.
 
-The build tree is for compilation only. A deployable directory is produced via:
+On first launch, `Settings/settings.json` is copied to the new location when it
+exists. Packaged applications do not write beside the executable.
+
+## Build and packaging
+
+Slint markup is compiled ahead of time by `slint_target_sources`. CMake first
+uses an installed Slint 1.18 package and otherwise fetches the pinned 1.18.1
+source release. The fallback needs Rust 1.92 or newer.
+
+Installable artifacts are produced with:
 
 ```text
 cmake --install <build-directory> --prefix <staging-directory>
 ```
-
-Qt's generated deployment script copies the required runtime libraries, QML
-imports, and plugins into the staging directory. Release archives and installers
-must be created from that directory, never from the build tree.

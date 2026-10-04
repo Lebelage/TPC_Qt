@@ -1,70 +1,41 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(TPC_Qt
-        VERSION 0.1
-        LANGUAGES CXX
-)
+project(TPC_Slint VERSION 0.1 LANGUAGES CXX)
 
+include(FetchContent)
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(TPC_QT_EXPORT_COMPILE_COMMANDS "Generate compile_commands.json" ON)
-option(TPC_QT_COMPACT_RELEASE "Optimize Release builds for minimum size" OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS "${TPC_QT_EXPORT_COMPILE_COMMANDS}")
-
-find_package(Qt6 REQUIRED COMPONENTS
-        Core
-        Concurrent
-        Gui
-        Qml
-        Quick
-        QuickControls2
-        Widgets
-)
+option(TPC_SLINT_EXPORT_COMPILE_COMMANDS "Generate compile_commands.json" ON)
+option(TPC_SLINT_COMPACT_RELEASE "Optimize Release builds for minimum size" OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS "${TPC_SLINT_EXPORT_COMPILE_COMMANDS}")
 
 find_package(nlohmann_json REQUIRED)
+find_package(Slint 1.18 QUIET)
 
-qt_standard_project_setup()
+if(NOT Slint_FOUND)
+    message(STATUS "Slint was not found locally; fetching Slint 1.18.1")
+    set(SLINT_FEATURE_INTERPRETER OFF CACHE BOOL "" FORCE)
+    set(SLINT_FEATURE_TESTING OFF CACHE BOOL "" FORCE)
+    set(SLINT_STYLE fluent CACHE STRING "" FORCE)
+    FetchContent_Declare(
+            Slint
+            GIT_REPOSITORY https://github.com/slint-ui/slint.git
+            GIT_TAG v1.18.1
+            GIT_SHALLOW TRUE
+            SOURCE_SUBDIR api/cpp
+    )
+    FetchContent_MakeAvailable(Slint)
+endif()
 
-qt_policy(SET QTP0001 NEW)
-qt_policy(SET QTP0004 NEW)
-
-# ============================================================
-# C++ sources
-# ============================================================
-
-file(GLOB_RECURSE CPP_SOURCES
-        CONFIGURE_DEPENDS
-
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-)
-
-# QML resource paths must be relative to the source directory.
-
-file(GLOB_RECURSE QML_FILES
-        CONFIGURE_DEPENDS
-        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-
-        "qml/*.qml"
-)
-
-# ============================================================
-# TPC API
-# ============================================================
-
-# The bundled source tree makes a checkout self-contained on every platform.
-# An installed TPC package or another source checkout can still be selected for
-# package-maintainer workflows.
-option(TPC_QT_USE_INSTALLED_TPC "Require an installed TPC CMake package" OFF)
+option(TPC_SLINT_USE_INSTALLED_TPC "Require an installed TPC CMake package" OFF)
 set(TPC_API_DIR "${CMAKE_CURRENT_SOURCE_DIR}/subprojects/tpc_api"
         CACHE PATH "Path to the TPC_API source tree")
 
-if(TPC_QT_USE_INSTALLED_TPC)
+if(TPC_SLINT_USE_INSTALLED_TPC)
     find_package(TPC CONFIG REQUIRED)
 elseif(TPC_API_DIR)
     if(NOT EXISTS "${TPC_API_DIR}/CMakeLists.txt")
@@ -73,159 +44,92 @@ elseif(TPC_API_DIR)
     add_subdirectory("${TPC_API_DIR}" "${CMAKE_BINARY_DIR}/TPC_API" EXCLUDE_FROM_ALL)
 endif()
 
-# ============================================================
-# Executable
-# ============================================================
-
-qt_add_executable(TPC_Qt
-        ${CPP_SOURCES}
+set(TPC_SLINT_SOURCES
+        src/main.cpp
+        src/application/application_context.cpp
+        src/application/application_context.hpp
+        src/application/platform_paths.cpp
+        src/application/platform_paths.hpp
+        src/models/application_settings_model.hpp
+        src/models/field_slice_model.hpp
+        src/models/tpc_data_model.hpp
+        src/services/event_dispatcher/event_dispatcher.cpp
+        src/services/event_dispatcher/event_dispatcher.hpp
+        src/services/field_slice/field_slice_service.cpp
+        src/services/field_slice/field_slice_service.hpp
+        src/services/file_worker/file_worker.cpp
+        src/services/file_worker/file_worker.hpp
+        src/services/scoped_subscription.hpp
+        src/services/settings_holder/settings_holder.cpp
+        src/services/settings_holder/settings_holder.hpp
+        src/services/tpc_service/tpc_service.cpp
+        src/services/tpc_service/tpc_service.hpp
+        src/ui/application_presenter.cpp
+        src/ui/application_presenter.hpp
 )
 
-set_target_properties(TPC_Qt PROPERTIES
+add_executable(TPC_Slint ${TPC_SLINT_SOURCES})
+slint_target_sources(TPC_Slint ui/app.slint)
+
+set_target_properties(TPC_Slint PROPERTIES
         CXX_SCAN_FOR_MODULES OFF
-)
-
-if(TPC_QT_COMPACT_RELEASE)
-    set_property(TARGET TPC_Qt PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-
-    if(MSVC)
-        target_compile_options(TPC_Qt PRIVATE
-                $<$<CONFIG:Release>:/O1>
-                $<$<CONFIG:Release>:/Gy>
-        )
-        target_link_options(TPC_Qt PRIVATE
-                $<$<CONFIG:Release>:/OPT:REF>
-                $<$<CONFIG:Release>:/OPT:ICF>
-        )
-    else()
-        target_compile_options(TPC_Qt PRIVATE
-                $<$<CONFIG:Release>:-Os>
-                $<$<CONFIG:Release>:-ffunction-sections>
-                $<$<CONFIG:Release>:-fdata-sections>
-        )
-
-        if(APPLE)
-            target_link_options(TPC_Qt PRIVATE
-                    $<$<CONFIG:Release>:-Wl,-dead_strip>
-                    $<$<CONFIG:Release>:-Wl,-x>
-            )
-        else()
-            target_link_options(TPC_Qt PRIVATE
-                    $<$<CONFIG:Release>:-Wl,--gc-sections>
-                    $<$<CONFIG:Release>:-Wl,--strip-all>
-            )
-        endif()
-    endif()
-endif()
-
-# ============================================================
-# QML module
-# ============================================================
-
-qt_add_qml_module(TPC_Qt
-        URI TPC
-        VERSION 1.0
-        SOURCES
-        ${CPP_SOURCES}
-
-        QML_FILES
-        ${QML_FILES}
-)
-
-# ============================================================
-# Include directories
-# ============================================================
-
-target_include_directories(TPC_Qt
-        PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/src"
-)
-
-# Keep Qt's convenience keywords from colliding with third-party APIs (oneTBB
-# declares a member function named `emit`). Use Q_SIGNALS/Q_SLOTS/Q_EMIT in
-# project sources instead.
-target_compile_definitions(TPC_Qt PRIVATE QT_NO_KEYWORDS)
-
-# ============================================================
-# Libraries
-# ============================================================
-
-target_link_libraries(TPC_Qt
-        PRIVATE
-        Qt6::Core
-        Qt6::Concurrent
-        Qt6::Gui
-        Qt6::Qml
-        Qt6::Quick
-        Qt6::QuickControls2
-        Qt6::Widgets
-
-        TPC::TPC
-
-        nlohmann_json::nlohmann_json
-)
-
-# Keep the final link self-contained on Windows. TPC::TPC already exposes these
-# dependencies transitively, but explicitly listing the imported targets avoids
-# MSVC dropping them when TPC is consumed through its interface/static targets.
-if(TARGET open62541pp::open62541pp)
-    target_link_libraries(TPC_Qt PRIVATE open62541pp::open62541pp)
-endif()
-
-if(TARGET open62541::open62541)
-    target_link_libraries(TPC_Qt PRIVATE open62541::open62541)
-endif()
-
-set_target_properties(TPC_Qt PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_GUI_IDENTIFIER "org.tpc.controller"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
 )
 
-# Use the program's regular main() entry point. This also avoids depending on
-# Qt's optional WinMain adapter, which is not present in every Windows Qt kit.
-if(WIN32)
-    set_target_properties(TPC_Qt PROPERTIES WIN32_EXECUTABLE FALSE)
+target_include_directories(TPC_Slint PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_link_libraries(TPC_Slint PRIVATE Slint::Slint TPC::TPC nlohmann_json::nlohmann_json)
+
+if(TARGET open62541pp::open62541pp)
+    target_link_libraries(TPC_Slint PRIVATE open62541pp::open62541pp)
+endif()
+if(TARGET open62541::open62541)
+    target_link_libraries(TPC_Slint PRIVATE open62541::open62541)
 endif()
 
-# ============================================================
-# MSVC
-# ============================================================
-
-if(MSVC)
-    target_compile_options(TPC_Qt
-            PRIVATE
-            /bigobj
-            /Zc:__cplusplus
-            /Zc:preprocessor
-            /permissive-
-    )
-
-    # TPC API is bundled as a subproject. Keep its MSVC language mode aligned
-    # with the application without carrying a platform-only fork of TPC API.
-    if(TARGET tpc_system)
-        target_compile_options(tpc_system PRIVATE
-                /bigobj
-                /Zc:__cplusplus
-                /Zc:preprocessor
-        )
+if(TPC_SLINT_COMPACT_RELEASE)
+    set_property(TARGET TPC_Slint PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+    if(MSVC)
+        target_compile_options(TPC_Slint PRIVATE $<$<CONFIG:Release>:/O1> $<$<CONFIG:Release>:/Gy>)
+        target_link_options(TPC_Slint PRIVATE $<$<CONFIG:Release>:/OPT:REF> $<$<CONFIG:Release>:/OPT:ICF>)
+    else()
+        target_compile_options(TPC_Slint PRIVATE
+                $<$<CONFIG:Release>:-Os>
+                $<$<CONFIG:Release>:-ffunction-sections>
+                $<$<CONFIG:Release>:-fdata-sections>)
+        if(APPLE)
+            target_link_options(TPC_Slint PRIVATE $<$<CONFIG:Release>:-Wl,-dead_strip>)
+        else()
+            target_link_options(TPC_Slint PRIVATE $<$<CONFIG:Release>:-Wl,--gc-sections>)
+        endif()
     endif()
 endif()
 
-# ============================================================
-# Installation and Qt runtime deployment
-# ============================================================
+if(WIN32)
+    set_target_properties(TPC_Slint PROPERTIES WIN32_EXECUTABLE FALSE)
+endif()
 
-install(TARGETS TPC_Qt
-        BUNDLE DESTINATION .
-        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-)
+if(MSVC)
+    target_compile_options(TPC_Slint PRIVATE /bigobj /Zc:__cplusplus /Zc:preprocessor /permissive-)
+    if(TARGET tpc_system)
+        target_compile_options(tpc_system PRIVATE /bigobj /Zc:__cplusplus /Zc:preprocessor)
+    endif()
+endif()
 
-qt_generate_deploy_qml_app_script(
-        TARGET TPC_Qt
-        OUTPUT_SCRIPT qt_deploy_script
-        NO_UNSUPPORTED_PLATFORM_ERROR
-)
+install(TARGETS TPC_Slint BUNDLE DESTINATION . RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
-install(SCRIPT "${qt_deploy_script}")
+if(APPLE)
+    # Copy non-system dylibs into the application bundle and rewrite their
+    # install names so the installed .app is independent of the build tree.
+    install(CODE "
+        include(BundleUtilities)
+        set(BU_CHMOD_BUNDLE_ITEMS ON)
+        fixup_bundle(
+            \"\${CMAKE_INSTALL_PREFIX}/TPC_Slint.app\"
+            \"\"
+            \"${CMAKE_BINARY_DIR}/TPC_API\"
+        )
+    ")
+endif()
