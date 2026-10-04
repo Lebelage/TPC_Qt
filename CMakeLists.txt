@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
 
+if(POLICY CMP0207)
+    cmake_policy(SET CMP0207 NEW)
+endif()
+
 project(TPC_Slint VERSION 0.1 LANGUAGES CXX)
 
 include(FetchContent)
@@ -41,7 +45,10 @@ elseif(TPC_API_DIR)
     if(NOT EXISTS "${TPC_API_DIR}/CMakeLists.txt")
         message(FATAL_ERROR "TPC_API_DIR does not contain CMakeLists.txt: '${TPC_API_DIR}'")
     endif()
-    add_subdirectory("${TPC_API_DIR}" "${CMAKE_BINARY_DIR}/TPC_API" EXCLUDE_FROM_ALL)
+    block()
+        set(BUILD_SHARED_LIBS OFF)
+        add_subdirectory("${TPC_API_DIR}" "${CMAKE_BINARY_DIR}/TPC_API" EXCLUDE_FROM_ALL)
+    endblock()
 endif()
 
 set(TPC_SLINT_SOURCES
@@ -108,7 +115,17 @@ if(TPC_SLINT_COMPACT_RELEASE)
 endif()
 
 if(WIN32)
-    set_target_properties(TPC_Slint PROPERTIES WIN32_EXECUTABLE FALSE)
+    set_target_properties(TPC_Slint PROPERTIES WIN32_EXECUTABLE TRUE)
+    if(TARGET slint_cpp-shared)
+        add_custom_command(
+                TARGET TPC_Slint POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "$<TARGET_FILE:slint_cpp-shared>"
+                        "$<TARGET_FILE_DIR:TPC_Slint>"
+                COMMENT "Copying Slint runtime beside TPC_Slint"
+                VERBATIM
+        )
+    endif()
 endif()
 
 if(MSVC)
@@ -118,7 +135,33 @@ if(MSVC)
     endif()
 endif()
 
-install(TARGETS TPC_Slint BUNDLE DESTINATION . RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+if(WIN32)
+    install(
+            TARGETS TPC_Slint
+            RUNTIME_DEPENDENCY_SET TPC_Slint_Runtime_Dependencies
+            BUNDLE DESTINATION .
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+
+    set(TPC_RUNTIME_DEPENDENCY_DIRS "${CMAKE_BINARY_DIR}")
+    if(VCPKG_INSTALLED_DIR AND VCPKG_TARGET_TRIPLET)
+        list(APPEND TPC_RUNTIME_DEPENDENCY_DIRS
+                "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
+    endif()
+
+    install(
+            RUNTIME_DEPENDENCY_SET TPC_Slint_Runtime_Dependencies
+            DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            DIRECTORIES ${TPC_RUNTIME_DEPENDENCY_DIRS}
+            PRE_EXCLUDE_REGEXES
+                "api-ms-.*"
+                "ext-ms-.*"
+            POST_EXCLUDE_REGEXES
+                ".*[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\][Ss]ystem32[/\\\\].*"
+    )
+else()
+    install(TARGETS TPC_Slint BUNDLE DESTINATION . RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
 
 if(APPLE)
     # Copy non-system dylibs into the application bundle and rewrite their
