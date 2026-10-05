@@ -73,7 +73,17 @@ set(TPC_SLINT_SOURCES
         src/services/tpc_service/tpc_service.hpp
         src/ui/application_presenter.cpp
         src/ui/application_presenter.hpp
+        src/ui/file_dialog.hpp
 )
+
+if(APPLE)
+    enable_language(OBJCXX)
+    list(APPEND TPC_SLINT_SOURCES src/ui/file_dialog_macos.mm)
+elseif(WIN32)
+    list(APPEND TPC_SLINT_SOURCES src/ui/file_dialog_windows.cpp)
+else()
+    list(APPEND TPC_SLINT_SOURCES src/ui/file_dialog_fallback.cpp)
+endif()
 
 add_executable(TPC_Slint ${TPC_SLINT_SOURCES})
 slint_target_sources(TPC_Slint ui/app.slint)
@@ -88,6 +98,14 @@ set_target_properties(TPC_Slint PROPERTIES
 
 target_include_directories(TPC_Slint PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(TPC_Slint PRIVATE Slint::Slint TPC::TPC nlohmann_json::nlohmann_json)
+
+if(APPLE)
+    target_link_libraries(TPC_Slint PRIVATE
+            "-framework AppKit"
+            "-framework UniformTypeIdentifiers")
+elseif(WIN32)
+    target_link_libraries(TPC_Slint PRIVATE ole32 shell32 uuid)
+endif()
 
 if(TARGET open62541pp::open62541pp)
     target_link_libraries(TPC_Slint PRIVATE open62541pp::open62541pp)

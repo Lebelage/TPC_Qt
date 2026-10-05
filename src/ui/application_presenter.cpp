@@ -16,6 +16,7 @@
 #include <utility>
 
 #include "application/application_context.hpp"
+#include "ui/file_dialog.hpp"
 #include "services/field_slice/field_slice_service.hpp"
 
 namespace tpc_slint::ui {
@@ -124,15 +125,15 @@ void ApplicationPresenter::bindUiCallbacks() {
         context_.tpc().calculateField();
     });
     main_window_->on_visualize_field([this] { field_window_->show(); });
-    main_window_->on_save_field([this](const slint::SharedString& path_text) {
-        fs::path path{std::string{path_text}};
-        if (path.empty()) {
-            setStatus("Enter a VTK output path", 2);
+    main_window_->on_save_field([this] {
+        const auto selected_path = showVtkSaveDialog();
+        if (!selected_path) {
             return;
         }
+
+        fs::path path{*selected_path};
         if (!path.has_extension()) {
             path.replace_extension(".vtk");
-            main_window_->set_export_path(slint::SharedString{path.string()});
         }
         const bool saved = context_.tpc().exportFieldToVtk(path.string());
         setStatus(saved ? "VTK field exported successfully" : "Could not export the VTK field", saved ? 1 : 2);

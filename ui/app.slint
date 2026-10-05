@@ -61,7 +61,6 @@ export component MainWindow inherits Window {
     in-out property <string> grid-nx: "10";
     in-out property <string> grid-ny: "10";
     in-out property <string> grid-nz: "10";
-    in-out property <string> export-path: "field.vtk";
     in-out property <string> status-message: "Ready";
     in property <int> status-level: 0;
 
@@ -69,7 +68,7 @@ export component MainWindow inherits Window {
     callback disconnect-requested();
     callback calculate-field();
     callback visualize-field();
-    callback save-field(string);
+    callback save-field();
     callback load-settings();
     callback apply-settings(string, string, string, string, string, string, string);
 
@@ -294,8 +293,7 @@ export component MainWindow inherits Window {
                             Text { text: root.status-message; color: Theme.text-muted; font-size: 11px; vertical-alignment: center; }
                         }
                     }
-                    DarkInput { text <=> root.export-path; width: 150px; active: root.field-calculated; placeholder: "field.vtk"; }
-                    AppButton { text: "Export VTK"; active: root.field-calculated; clicked => { root.save-field(root.export-path); } }
+                    AppButton { text: "Export VTK"; active: root.field-calculated; clicked => { root.save-field(); } }
                     AppButton { text: "Open slices"; active: root.field-calculated; clicked => { root.visualize-field(); } }
                     AppButton { text: "Calculate field"; primary: true; clicked => { root.calculate-field(); } }
                 }
