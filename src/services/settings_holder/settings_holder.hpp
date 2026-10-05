@@ -38,6 +38,7 @@ public:
 
 private:
     [[nodiscard]] static models::AppSettings defaultSettings();
+    [[nodiscard]] std::expected<void, std::string> restoreDefaultSettings();
     static void setDefaultSensorPositions(
         std::vector<models::SensorInfo>& sensors,
         models::TpcGeometryParams geometry

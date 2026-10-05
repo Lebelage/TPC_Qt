@@ -14,10 +14,7 @@
 
 namespace {
 int runApplication() {
-    tpc_slint::application::ApplicationContext context{
-        tpc_slint::application::settingsPath(),
-        tpc_slint::application::legacySettingsPath()
-    };
+    tpc_slint::application::ApplicationContext context{tpc_slint::application::settingsPath()};
 
     auto main_window = MainWindow::create();
     auto field_window = FieldWindow::create();

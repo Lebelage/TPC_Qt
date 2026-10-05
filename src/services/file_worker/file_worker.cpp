@@ -10,9 +10,9 @@
 namespace tpc_slint::services {
 namespace fs = std::filesystem;
 
-FileWorker::FileWorker(fs::path settings_path, std::optional<fs::path> legacy_settings_path)
+FileWorker::FileWorker(fs::path settings_path)
     : settings_path_(std::move(settings_path)) {
-    initialize(legacy_settings_path);
+    initialize();
 }
 
 std::expected<void, std::string> FileWorker::writeSettings(const std::string& settings_text) {
@@ -50,15 +50,10 @@ std::expected<std::string, std::string> FileWorker::loadSettings() const {
     return buffer.str();
 }
 
-void FileWorker::initialize(const std::optional<fs::path>& legacy_settings_path) {
+void FileWorker::initialize() {
     std::scoped_lock lock{mutex_};
     std::error_code error;
     fs::create_directories(settings_path_.parent_path(), error);
-
-    if (!fs::exists(settings_path_) && legacy_settings_path && fs::exists(*legacy_settings_path)) {
-        error.clear();
-        fs::copy_file(*legacy_settings_path, settings_path_, fs::copy_options::skip_existing, error);
-    }
 
     if (!fs::exists(settings_path_)) {
         std::ofstream{settings_path_};

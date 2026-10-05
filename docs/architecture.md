@@ -51,15 +51,12 @@ and CI builds may use `find_package(TPC CONFIG)` by setting
 
 ## Settings
 
-Settings use the platform configuration directory:
+Settings are stored with the application:
 
-- macOS: `~/Library/Application Support/TPC/TPC_Slint/settings.json`;
-- Windows: `%APPDATA%/TPC/TPC_Slint/settings.json`;
-- Linux: `$XDG_CONFIG_HOME/TPC_Slint/settings.json` or
-  `~/.config/TPC_Slint/settings.json`.
+- all platforms: `Settings/settings.json` next to the application executable.
 
-On first launch, `Settings/settings.json` is copied to the new location when it
-exists. Packaged applications do not write beside the executable.
+On first launch, `Settings/settings.json` is created with default values. If it
+is empty, malformed, or cannot be deserialized, it is replaced with defaults.
 
 ## Build and packaging
 

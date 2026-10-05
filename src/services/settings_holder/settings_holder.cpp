@@ -48,12 +48,7 @@ void SettingsHolderService::applySettings() {
 std::expected<void, std::string> SettingsHolderService::loadSettings() {
     const auto loaded = file_worker_.loadSettings();
     if (!loaded) {
-        {
-            std::scoped_lock lock{mutex_};
-            current_settings_ = defaultSettings();
-        }
-        applySettings();
-        return std::unexpected{loaded.error()};
+        return restoreDefaultSettings();
     }
 
     try {
@@ -76,13 +71,8 @@ std::expected<void, std::string> SettingsHolderService::loadSettings() {
         }
         applySettings();
         return {};
-    } catch (const std::exception& error) {
-        {
-            std::scoped_lock lock{mutex_};
-            current_settings_ = defaultSettings();
-        }
-        applySettings();
-        return std::unexpected{error.what()};
+    } catch (const std::exception&) {
+        return restoreDefaultSettings();
     }
 }
 
@@ -123,6 +113,22 @@ models::AppSettings SettingsHolderService::defaultSettings() {
         .sensors_info = {},
         .grid = {kDefaultGridSize, kDefaultGridSize, kDefaultGridSize}
     };
+}
+
+std::expected<void, std::string> SettingsHolderService::restoreDefaultSettings() {
+    models::AppSettings defaults = defaultSettings();
+    {
+        std::scoped_lock lock{mutex_};
+        current_settings_ = defaults;
+    }
+
+    const nlohmann::json settings_json(defaults);
+    const auto written = file_worker_.writeSettings(settings_json.dump(4));
+    events_.settings_changed.invoke(defaults);
+    if (!written) {
+        return std::unexpected{written.error()};
+    }
+    return {};
 }
 
 void SettingsHolderService::setDefaultSensorPositions(

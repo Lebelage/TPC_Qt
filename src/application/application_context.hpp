@@ -2,7 +2,6 @@
 
 #include <expected>
 #include <filesystem>
-#include <optional>
 #include <string>
 
 #include "services/event_dispatcher/event_dispatcher.hpp"
@@ -21,10 +20,7 @@ namespace tpc_slint::application {
  */
 class ApplicationContext final {
 public:
-    ApplicationContext(
-        std::filesystem::path settings_path,
-        std::optional<std::filesystem::path> legacy_settings_path = std::nullopt
-    );
+    explicit ApplicationContext(std::filesystem::path settings_path);
 
     ApplicationContext(const ApplicationContext&) = delete;
     ApplicationContext& operator=(const ApplicationContext&) = delete;
