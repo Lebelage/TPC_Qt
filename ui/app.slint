@@ -17,9 +17,9 @@ export struct SensorRow {
 component PageTitle inherits VerticalLayout {
     in property <string> title;
     in property <string> subtitle;
-    spacing: 3px;
-    Text { text: root.title; color: Theme.text; font-size: 24px; font-weight: 700; }
-    Text { text: root.subtitle; color: Theme.text-muted; font-size: 13px; }
+    spacing: 1px;
+    Text { text: root.title; color: Theme.text; font-size: 20px; font-weight: 700; }
+    Text { text: root.subtitle; color: Theme.text-muted; font-size: 12px; }
 }
 
 component FormLabel inherits Text {
@@ -33,9 +33,9 @@ component SettingsCard inherits Panel {
     in property <string> title;
     in property <string> description;
     VerticalLayout {
-        padding: 20px;
-        spacing: 14px;
-        Text { text: root.title; color: Theme.text; font-size: 16px; font-weight: 700; }
+        padding: 15px;
+        spacing: 10px;
+        Text { text: root.title; color: Theme.text; font-size: 15px; font-weight: 700; }
         Text { text: root.description; color: Theme.text-subtle; font-size: 12px; wrap: word-wrap; }
         @children
     }
@@ -43,10 +43,10 @@ component SettingsCard inherits Panel {
 
 export component MainWindow inherits Window {
     title: "TPC Field Console";
-    preferred-width: 1180px;
-    preferred-height: 760px;
-    min-width: 940px;
-    min-height: 620px;
+    preferred-width: 1080px;
+    preferred-height: 680px;
+    min-width: 860px;
+    min-height: 560px;
     background: Theme.canvas;
     default-font-family: "Inter";
 
@@ -77,27 +77,27 @@ export component MainWindow inherits Window {
         spacing: 0px;
 
         Rectangle {
-            width: 218px;
+            width: 184px;
             background: Theme.sidebar;
             border-color: Theme.border;
             border-width: 1px;
 
             VerticalLayout {
-                padding: 16px;
-                spacing: 8px;
+                padding: 12px;
+                spacing: 6px;
 
                 HorizontalLayout {
-                    height: 62px;
-                    spacing: 11px;
+                    height: 48px;
+                    spacing: 9px;
                     Rectangle {
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 10px;
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 8px;
                         background: Theme.accent;
                         Text {
                             text: "B";
                             color: white;
-                            font-size: 19px;
+                            font-size: 16px;
                             font-weight: 800;
                             horizontal-alignment: center;
                             vertical-alignment: center;
@@ -105,29 +105,34 @@ export component MainWindow inherits Window {
                     }
                     VerticalLayout {
                         spacing: 0px;
-                        Text { text: "TPC"; color: Theme.text; font-size: 17px; font-weight: 800; vertical-alignment: bottom; }
-                        Text { text: "FIELD CONSOLE"; color: Theme.text-subtle; font-size: 9px; font-weight: 700; letter-spacing: 1px; vertical-alignment: top; }
+                        Text { text: "TPC"; color: Theme.text; font-size: 15px; font-weight: 800; vertical-alignment: bottom; }
+                        Text { text: "FIELD CONSOLE"; color: Theme.text-subtle; font-size: 8px; font-weight: 700; letter-spacing: 0.8px; vertical-alignment: top; }
                     }
                 }
 
-                Text { text: "NAVIGATION"; color: Theme.text-subtle; font-size: 9px; font-weight: 700; letter-spacing: 1px; height: 25px; vertical-alignment: bottom; }
+                Text { text: "NAVIGATION"; color: Theme.text-subtle; font-size: 8px; font-weight: 700; letter-spacing: 0.8px; height: 20px; vertical-alignment: bottom; }
                 NavButton { text: "Workspace"; symbol: "◎"; selected: root.current-tab == 0; clicked => { root.current-tab = 0; } }
                 NavButton { text: "Settings"; symbol: "⌁"; selected: root.current-tab == 1; clicked => { root.current-tab = 1; } }
 
                 Rectangle { vertical-stretch: 1; background: transparent; }
 
                 Panel {
-                    height: 112px;
+                    height: 96px;
                     VerticalLayout {
-                        padding: 13px;
-                        spacing: 9px;
+                        padding: 10px;
+                        spacing: 7px;
                         HorizontalLayout {
-                            spacing: 8px;
-                            StatusDot { online: root.connected; }
+                            height: 18px;
+                            spacing: 7px;
+                            Rectangle {
+                                width: 9px;
+                                background: transparent;
+                                StatusDot { y: (parent.height - self.height) / 2; online: root.connected; }
+                            }
                             Text {
                                 text: root.connected ? "TPC online" : "TPC offline";
                                 color: root.connected ? Theme.success : Theme.text-muted;
-                                font-size: 12px;
+                                font-size: 11px;
                                 font-weight: 650;
                                 vertical-alignment: center;
                             }
@@ -135,11 +140,11 @@ export component MainWindow inherits Window {
                         Text {
                             text: root.connected ? "Receiving live sensor data" : "No active OPC UA session";
                             color: Theme.text-subtle;
-                            font-size: 10px;
+                            font-size: 9px;
                             wrap: word-wrap;
                         }
                         AppButton {
-                            height: 34px;
+                            height: 30px;
                             text: root.connected ? "Disconnect" : "Connect";
                             primary: !root.connected;
                             clicked => {
@@ -157,11 +162,11 @@ export component MainWindow inherits Window {
             background: Theme.canvas;
 
             if root.current-tab == 0: VerticalLayout {
-                padding: 24px;
-                spacing: 16px;
+                padding: 18px;
+                spacing: 12px;
 
                 HorizontalLayout {
-                    height: 55px;
+                    height: 46px;
                     PageTitle {
                         title: "Sensor workspace";
                         subtitle: "Live magnetic field components and sensor geometry";
@@ -171,8 +176,8 @@ export component MainWindow inherits Window {
                 }
 
                 HorizontalLayout {
-                    height: 88px;
-                    spacing: 12px;
+                    height: 76px;
+                    spacing: 10px;
                     MetricCard {
                         horizontal-stretch: 1;
                         label: "SENSORS";
@@ -203,21 +208,21 @@ export component MainWindow inherits Window {
                         spacing: 0px;
 
                         Rectangle {
-                            height: 62px;
+                            height: 54px;
                             background: Theme.surface-raised;
                             VerticalLayout {
                                 spacing: 2px;
                                 HorizontalLayout {
-                                    padding-left: 14px;
-                                    padding-right: 14px;
+                                    padding-left: 12px;
+                                    padding-right: 12px;
                                     spacing: 4px;
                                     Text { text: "SENSOR"; width: 92px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; vertical-alignment: center; }
                                     Text { text: "FIELD COMPONENTS, G"; width: 336px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
                                     Text { text: "COORDINATES, CM"; horizontal-stretch: 1; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
                                 }
                                 HorizontalLayout {
-                                    padding-left: 14px;
-                                    padding-right: 14px;
+                                    padding-left: 12px;
+                                    padding-right: 12px;
                                     spacing: 4px;
                                     Text { text: "ID"; width: 92px; color: Theme.text-muted; font-size: 11px; }
                                     Text { text: "R"; width: 108px; color: Theme.text-muted; font-size: 11px; horizontal-alignment: center; }
@@ -233,14 +238,14 @@ export component MainWindow inherits Window {
                         ListView {
                             vertical-stretch: 1;
                             for row[index] in root.sensor-rows: Rectangle {
-                                height: 45px;
+                                height: 40px;
                                 background: row-touch.has-hover ? Theme.surface-hover
                                     : mod(index, 2) == 0 ? Theme.surface : #111924;
                                 border-color: Theme.border;
                                 border-width: 1px;
                                 HorizontalLayout {
-                                    padding-left: 14px;
-                                    padding-right: 14px;
+                                    padding-left: 12px;
+                                    padding-right: 12px;
                                     spacing: 4px;
                                     Text { text: row.name; width: 92px; color: Theme.text; font-size: 13px; font-weight: 700; vertical-alignment: center; }
                                     TableCell { text: row.radial; width: 108px; color: #81aaff; }
@@ -268,22 +273,28 @@ export component MainWindow inherits Window {
                 }
 
                 HorizontalLayout {
-                    height: 42px;
-                    spacing: 10px;
+                    height: 36px;
+                    spacing: 8px;
                     Rectangle {
                         horizontal-stretch: 1;
                         background: transparent;
                         HorizontalLayout {
-                            spacing: 8px;
+                            height: 18px;
+                            spacing: 7px;
                             Rectangle {
-                                width: 7px; height: 7px; border-radius: 4px;
-                                background: root.status-level == 2 ? Theme.danger
-                                    : root.status-level == 1 ? Theme.success : Theme.text-subtle;
+                                width: 7px;
+                                background: transparent;
+                                Rectangle {
+                                    y: (parent.height - self.height) / 2;
+                                    width: 7px; height: 7px; border-radius: 4px;
+                                    background: root.status-level == 2 ? Theme.danger
+                                        : root.status-level == 1 ? Theme.success : Theme.text-subtle;
+                                }
                             }
-                            Text { text: root.status-message; color: Theme.text-muted; font-size: 12px; vertical-alignment: center; }
+                            Text { text: root.status-message; color: Theme.text-muted; font-size: 11px; vertical-alignment: center; }
                         }
                     }
-                    DarkInput { text <=> root.export-path; width: 170px; active: root.field-calculated; placeholder: "field.vtk"; }
+                    DarkInput { text <=> root.export-path; width: 150px; active: root.field-calculated; placeholder: "field.vtk"; }
                     AppButton { text: "Export VTK"; active: root.field-calculated; clicked => { root.save-field(root.export-path); } }
                     AppButton { text: "Open slices"; active: root.field-calculated; clicked => { root.visualize-field(); } }
                     AppButton { text: "Calculate field"; primary: true; clicked => { root.calculate-field(); } }
@@ -291,24 +302,24 @@ export component MainWindow inherits Window {
             }
 
             if root.current-tab == 1: VerticalLayout {
-                padding: 24px;
-                spacing: 18px;
+                padding: 18px;
+                spacing: 12px;
 
                 PageTitle {
-                    height: 55px;
+                    height: 46px;
                     title: "System settings";
                     subtitle: "Geometry, data acquisition and calculation grid";
                 }
 
                 HorizontalLayout {
                     vertical-stretch: 1;
-                    spacing: 16px;
+                    spacing: 12px;
 
                     VerticalLayout {
                         horizontal-stretch: 1;
-                        spacing: 16px;
+                        spacing: 12px;
                         SettingsCard {
-                            height: 240px;
+                            height: 208px;
                             title: "TPC geometry";
                             description: "Physical dimensions used for reconstruction and slice bounds.";
                             FormLabel { text: "Length, cm"; }
@@ -317,7 +328,7 @@ export component MainWindow inherits Window {
                             DarkInput { text <=> root.tpc-radius; }
                         }
                         SettingsCard {
-                            height: 200px;
+                            height: 172px;
                             title: "Calculation grid";
                             description: "Sampling resolution along each Cartesian axis.";
                             HorizontalLayout {
@@ -332,9 +343,9 @@ export component MainWindow inherits Window {
 
                     VerticalLayout {
                         horizontal-stretch: 1;
-                        spacing: 16px;
+                        spacing: 12px;
                         SettingsCard {
-                            height: 240px;
+                            height: 208px;
                             title: "OPC UA connection";
                             description: "Endpoint and sensor polling cadence.";
                             FormLabel { text: "Endpoint URL"; }
@@ -343,11 +354,11 @@ export component MainWindow inherits Window {
                             DarkInput { text <=> root.polling-interval; }
                         }
                         Panel {
-                            height: 140px;
+                            height: 124px;
                             VerticalLayout {
-                                padding: 20px;
-                                spacing: 9px;
-                                Text { text: "Configuration file"; color: Theme.text; font-size: 16px; font-weight: 700; }
+                                padding: 15px;
+                                spacing: 7px;
+                                Text { text: "Configuration file"; color: Theme.text; font-size: 15px; font-weight: 700; }
                                 Text { text: "Settings are validated and saved in the platform configuration directory."; color: Theme.text-subtle; font-size: 12px; wrap: word-wrap; }
                                 HorizontalLayout {
                                     spacing: 10px;
@@ -374,10 +385,10 @@ export component MainWindow inherits Window {
 
 export component FieldWindow inherits Window {
     title: "TPC Field Slices";
-    preferred-width: 960px;
-    preferred-height: 740px;
-    min-width: 720px;
-    min-height: 560px;
+    preferred-width: 900px;
+    preferred-height: 660px;
+    min-width: 680px;
+    min-height: 520px;
     background: Theme.canvas;
     default-font-family: "Inter";
 
@@ -397,11 +408,11 @@ export component FieldWindow inherits Window {
     callback viewport-changed(float, float);
 
     VerticalLayout {
-        padding: 22px;
-        spacing: 14px;
+        padding: 18px;
+        spacing: 12px;
 
         HorizontalLayout {
-            height: 54px;
+            height: 46px;
             PageTitle {
                 title: "Field slice";
                 subtitle: "Direct-basis reconstruction · double precision";
@@ -411,14 +422,14 @@ export component FieldWindow inherits Window {
         }
 
         Panel {
-            height: 58px;
+            height: 50px;
             HorizontalLayout {
-                padding: 9px;
+                padding: 8px;
                 spacing: 8px;
                 MutedLabel { text: "Slice plane"; width: 80px; }
-                AppButton { width: 54px; text: "X"; primary: root.axis-index == 0; clicked => { root.axis-index = 0; root.axis-changed(0); } }
-                AppButton { width: 54px; text: "Y"; primary: root.axis-index == 1; clicked => { root.axis-index = 1; root.axis-changed(1); } }
-                AppButton { width: 54px; text: "Z"; primary: root.axis-index == 2; clicked => { root.axis-index = 2; root.axis-changed(2); } }
+                AppButton { width: 48px; text: "X"; primary: root.axis-index == 0; clicked => { root.axis-index = 0; root.axis-changed(0); } }
+                AppButton { width: 48px; text: "Y"; primary: root.axis-index == 1; clicked => { root.axis-index = 1; root.axis-changed(1); } }
+                AppButton { width: 48px; text: "Z"; primary: root.axis-index == 2; clicked => { root.axis-index = 2; root.axis-changed(2); } }
                 Rectangle { horizontal-stretch: 1; background: transparent; }
                 Text { text: root.position-label; color: Theme.text; font-family: "monospace"; font-size: 13px; vertical-alignment: center; }
             }
@@ -448,10 +459,10 @@ export component FieldWindow inherits Window {
         }
 
         Panel {
-            height: 112px;
+            height: 96px;
             VerticalLayout {
-                padding: 14px;
-                spacing: 10px;
+                padding: 12px;
+                spacing: 8px;
                 HorizontalLayout {
                     spacing: 10px;
                     Text { text: root.minimum-position; color: Theme.text-muted; font-family: "monospace"; font-size: 11px; vertical-alignment: center; }

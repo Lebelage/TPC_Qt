@@ -4,7 +4,7 @@ export component Panel inherits Rectangle {
     background: Theme.surface;
     border-color: Theme.border;
     border-width: 1px;
-    border-radius: 12px;
+    border-radius: 8px;
 }
 
 export component MutedLabel inherits Text {
@@ -19,9 +19,9 @@ export component AppButton inherits Rectangle {
     in property <bool> active: true;
     callback clicked();
 
-    min-width: 96px;
-    height: 40px;
-    border-radius: 8px;
+    min-width: 84px;
+    height: 34px;
+    border-radius: 6px;
     border-width: 1px;
     border-color: root.primary ? Theme.accent : Theme.border-strong;
     background: !root.active ? Theme.surface-raised
@@ -36,7 +36,7 @@ export component AppButton inherits Rectangle {
     Text {
         text: root.text;
         color: root.primary ? white : Theme.text;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -55,37 +55,37 @@ export component NavButton inherits Rectangle {
     in property <bool> selected: false;
     callback clicked();
 
-    height: 44px;
-    border-radius: 9px;
+    height: 38px;
+    border-radius: 7px;
     background: root.selected ? Theme.accent-soft : nav-touch.has-hover ? Theme.surface-hover : transparent;
     accessible-role: button;
     accessible-label: root.text;
 
     Rectangle {
         x: 0;
-        y: 8px;
+        y: 7px;
         width: 3px;
-        height: parent.height - 16px;
+        height: parent.height - 14px;
         border-radius: 2px;
         background: root.selected ? Theme.accent : transparent;
     }
 
     HorizontalLayout {
-        padding-left: 14px;
-        padding-right: 12px;
-        spacing: 11px;
+        padding-left: 11px;
+        padding-right: 10px;
+        spacing: 8px;
         Text {
             text: root.symbol;
             color: root.selected ? #a9c2ff : Theme.text-subtle;
-            font-size: 15px;
-            width: 22px;
+            font-size: 14px;
+            width: 19px;
             horizontal-alignment: center;
             vertical-alignment: center;
         }
         Text {
             text: root.text;
             color: root.selected ? Theme.text : Theme.text-muted;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: root.selected ? 600 : 500;
             vertical-alignment: center;
         }
@@ -99,8 +99,8 @@ export component DarkInput inherits Rectangle {
     in property <string> placeholder: "";
     in property <bool> active: true;
 
-    height: 38px;
-    border-radius: 7px;
+    height: 34px;
+    border-radius: 6px;
     border-width: 1px;
     border-color: editor.has-focus ? Theme.accent : Theme.border-strong;
     background: Theme.canvas;
@@ -136,13 +136,13 @@ export component MetricCard inherits Panel {
     in property <string> detail;
     in property <brush> value-color: Theme.text;
 
-    height: 88px;
+    height: 76px;
     VerticalLayout {
-        padding: 14px;
-        spacing: 3px;
-        Text { text: root.label; color: Theme.text-subtle; font-size: 11px; font-weight: 700; letter-spacing: 0.7px; }
-        Text { text: root.value; color: root.value-color; font-size: 20px; font-weight: 700; }
-        Text { text: root.detail; color: Theme.text-muted; font-size: 11px; }
+        padding: 11px;
+        spacing: 2px;
+        Text { text: root.label; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+        Text { text: root.value; color: root.value-color; font-size: 18px; font-weight: 700; }
+        Text { text: root.detail; color: Theme.text-muted; font-size: 10px; }
     }
 }
 
@@ -166,8 +166,8 @@ export component TableCell inherits Text {
 export component FieldBadge inherits Rectangle {
     in property <bool> ready;
     width: ready ? 86px : 104px;
-    height: 26px;
-    border-radius: 13px;
+    height: 24px;
+    border-radius: 12px;
     background: ready ? Theme.success-soft : Theme.surface-raised;
     Text {
         text: root.ready ? "READY" : "NOT READY";
