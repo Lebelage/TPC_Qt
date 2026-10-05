@@ -28,7 +28,7 @@ void dispatchToUi(Function&& function) {
     (void)slint::invoke_from_event_loop(std::forward<Function>(function));
 }
 
-[[nodiscard]] std::optional<double> parseDouble(const slint::SharedString& text) {
+[[nodiscard]] std::optional<double> parseDouble(std::string_view text) {
     const std::string value{text};
     char* end = nullptr;
     const double parsed = std::strtod(value.c_str(), &end);
@@ -36,6 +36,10 @@ void dispatchToUi(Function&& function) {
         return std::nullopt;
     }
     return parsed;
+}
+
+[[nodiscard]] std::optional<double> parseDouble(const slint::SharedString& text) {
+    return parseDouble(std::string_view{text.data(), text.size()});
 }
 
 [[nodiscard]] std::optional<int> parseInt(const slint::SharedString& text) {
@@ -96,6 +100,9 @@ void ApplicationPresenter::bindServiceEvents() {
     calculation_subscription_.subscribe(events.field_was_calculated_, [this](bool calculated) {
         dispatchToUi([this, calculated] {
             main_window_->set_field_calculated(calculated);
+            if (!calculated) {
+                field_window_->set_loading(false);
+            }
             setStatus(calculated ? "Field calculation completed" : "Field calculation failed", calculated ? 1 : 2);
         });
     });
@@ -119,11 +126,7 @@ void ApplicationPresenter::bindUiCallbacks() {
         }
     });
     main_window_->on_disconnect_requested([this] { context_.tpc().disconnect(); });
-    main_window_->on_calculate_field([this] {
-        main_window_->set_field_calculated(false);
-        setStatus("Calculating field…");
-        context_.tpc().calculateField();
-    });
+    main_window_->on_calculate_field([this] { calculateField(); });
     main_window_->on_visualize_field([this] { field_window_->show(); });
     main_window_->on_save_field([this] {
         const auto selected_path = showVtkSaveDialog();
@@ -178,6 +181,10 @@ void ApplicationPresenter::bindUiCallbacks() {
 
     field_window_->on_axis_changed([this](int axis) { selectAxis(axis); });
     field_window_->on_position_changed([this](float position) { selectPosition(position); });
+    field_window_->on_position_entered([this](const slint::SharedString& position) {
+        selectPosition(std::string_view{position.data(), position.size()});
+    });
+    field_window_->on_calculate_field([this] { calculateField(); });
     field_window_->on_viewport_changed([this](float width, float height) {
         viewport_width_ = std::clamp(static_cast<int>(width), 128, 1024);
         viewport_height_ = std::clamp(static_cast<int>(height), 128, 1024);
@@ -254,6 +261,7 @@ void ApplicationPresenter::acceptGeometry(models::FieldGeometry geometry) {
     field_window_->set_minimum_position(static_cast<float>(-extent));
     field_window_->set_maximum_position(static_cast<float>(extent));
     field_window_->set_slice_position(0.0f);
+    field_window_->set_position_input("0");
     requestSlice();
 }
 
@@ -270,6 +278,14 @@ void ApplicationPresenter::acceptSlice(std::shared_ptr<const services::RenderedF
     field_window_->set_loading(false);
 }
 
+void ApplicationPresenter::calculateField() {
+    main_window_->set_field_calculated(false);
+    field_window_->set_available(false);
+    field_window_->set_loading(true);
+    setStatus("Calculating field…");
+    context_.tpc().calculateField();
+}
+
 void ApplicationPresenter::selectAxis(int axis) {
     axis_ = std::clamp(axis, 0, 2);
     position_ = 0.0;
@@ -277,6 +293,7 @@ void ApplicationPresenter::selectAxis(int axis) {
     field_window_->set_minimum_position(static_cast<float>(-extent));
     field_window_->set_maximum_position(static_cast<float>(extent));
     field_window_->set_slice_position(0.0f);
+    field_window_->set_position_input("0");
     requestSlice();
 }
 
@@ -284,10 +301,22 @@ void ApplicationPresenter::selectPosition(float position) {
     const double extent = axisExtent();
     const double bounded = std::clamp(static_cast<double>(position), -extent, extent);
     if (std::abs(bounded - position_) <= std::numeric_limits<double>::epsilon()) {
+        field_window_->set_position_input(slint::SharedString{std::format("{:.5g}", bounded)});
         return;
     }
     position_ = bounded;
+    field_window_->set_slice_position(static_cast<float>(bounded));
+    field_window_->set_position_input(slint::SharedString{std::format("{:.5g}", bounded)});
     requestSlice();
+}
+
+void ApplicationPresenter::selectPosition(std::string_view position) {
+    const auto parsed = parseDouble(position);
+    if (!parsed) {
+        field_window_->set_position_input(slint::SharedString{std::format("{:.5g}", position_)});
+        return;
+    }
+    selectPosition(static_cast<float>(*parsed));
 }
 
 void ApplicationPresenter::requestSlice() {

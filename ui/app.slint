@@ -171,7 +171,15 @@ export component MainWindow inherits Window {
                         subtitle: "Live magnetic field components and sensor geometry";
                         horizontal-stretch: 1;
                     }
-                    FieldBadge { ready: root.field-calculated; }
+                    Rectangle {
+                        width: 104px;
+                        background: transparent;
+                        FieldBadge {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            ready: root.field-calculated;
+                        }
+                    }
                 }
 
                 HorizontalLayout {
@@ -278,6 +286,7 @@ export component MainWindow inherits Window {
                         horizontal-stretch: 1;
                         background: transparent;
                         HorizontalLayout {
+                            y: (parent.height - self.height) / 2;
                             height: 18px;
                             spacing: 7px;
                             Rectangle {
@@ -395,6 +404,7 @@ export component FieldWindow inherits Window {
     in property <image> slice-image;
     in-out property <int> axis-index: 2;
     in-out property <float> slice-position: 0;
+    in-out property <string> position-input: "0";
     in property <float> minimum-position: 0;
     in property <float> maximum-position: 0;
     in property <float> minimum-value: 0;
@@ -403,6 +413,8 @@ export component FieldWindow inherits Window {
 
     callback axis-changed(int);
     callback position-changed(float);
+    callback position-entered(string);
+    callback calculate-field();
     callback viewport-changed(float, float);
 
     VerticalLayout {
@@ -411,12 +423,32 @@ export component FieldWindow inherits Window {
 
         HorizontalLayout {
             height: 46px;
+            spacing: 8px;
             PageTitle {
                 title: "Field slice";
                 subtitle: "Direct-basis reconstruction · double precision";
                 horizontal-stretch: 1;
             }
-            FieldBadge { ready: root.available; }
+            Rectangle {
+                width: 124px;
+                background: transparent;
+                AppButton {
+                    y: (parent.height - self.height) / 2;
+                    width: parent.width;
+                    text: "Recalculate";
+                    active: !root.loading;
+                    clicked => { root.calculate-field(); }
+                }
+            }
+            Rectangle {
+                width: 104px;
+                background: transparent;
+                FieldBadge {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    ready: root.available;
+                }
+            }
         }
 
         Panel {
@@ -457,38 +489,82 @@ export component FieldWindow inherits Window {
         }
 
         Panel {
-            height: 96px;
+            height: 100px;
             VerticalLayout {
                 padding: 12px;
                 spacing: 8px;
                 HorizontalLayout {
-                    spacing: 10px;
-                    Text { text: root.minimum-position; color: Theme.text-muted; font-family: "monospace"; font-size: 11px; vertical-alignment: center; }
-                    Slider {
-                        horizontal-stretch: 1;
-                        minimum: root.minimum-position;
-                        maximum: root.maximum-position;
-                        value <=> root.slice-position;
-                        enabled: root.available && root.maximum-position > root.minimum-position;
-                        changed => { root.position-changed(self.value); }
+                    height: 34px;
+                    spacing: 8px;
+                    Text {
+                        width: 54px;
+                        text: root.minimum-position;
+                        color: Theme.text-muted;
+                        font-family: "monospace";
+                        font-size: 11px;
+                        horizontal-alignment: right;
+                        vertical-alignment: center;
                     }
-                    Text { text: root.maximum-position + " cm"; color: Theme.text-muted; font-family: "monospace"; font-size: 11px; vertical-alignment: center; }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        background: transparent;
+                        Slider {
+                            y: (parent.height - self.height) / 2;
+                            width: parent.width;
+                            height: 22px;
+                            minimum: root.minimum-position;
+                            maximum: root.maximum-position;
+                            value <=> root.slice-position;
+                            enabled: root.available && root.maximum-position > root.minimum-position;
+                            changed => { root.position-changed(self.value); }
+                        }
+                    }
+                    Text {
+                        width: 70px;
+                        text: root.maximum-position + " cm";
+                        color: Theme.text-muted;
+                        font-family: "monospace";
+                        font-size: 11px;
+                        vertical-alignment: center;
+                    }
+                    DarkInput {
+                        width: 82px;
+                        text <=> root.position-input;
+                        active: root.available;
+                        placeholder: "0";
+                        accepted(value) => { root.position-entered(value); }
+                    }
+                    AppButton {
+                        width: 48px;
+                        text: "Go";
+                        active: root.available;
+                        clicked => { root.position-entered(root.position-input); }
+                    }
                 }
                 HorizontalLayout {
+                    height: 34px;
                     spacing: 12px;
                     Rectangle {
-                        width: 210px; height: 10px; border-radius: 5px;
-                        background: @linear-gradient(90deg, #440154 0%, #414487 20%, #2a788e 40%, #22a884 60%, #7ad151 80%, #fde725 100%);
+                        width: 210px;
+                        background: transparent;
+                        Rectangle {
+                            y: (parent.height - self.height) / 2;
+                            width: parent.width;
+                            height: 10px;
+                            border-radius: 5px;
+                            background: @linear-gradient(90deg, #440154 0%, #414487 20%, #2a788e 40%, #22a884 60%, #7ad151 80%, #fde725 100%);
+                        }
                     }
-                    Text { text: "|B|"; color: Theme.text-subtle; font-size: 11px; }
+                    Text { text: "|B|"; color: Theme.text-subtle; font-size: 11px; vertical-alignment: center; }
                     Text {
                         text: root.minimum-value + "  —  " + root.maximum-value + " G";
                         color: Theme.text-muted;
                         font-family: "monospace";
                         font-size: 11px;
                         horizontal-stretch: 1;
+                        vertical-alignment: center;
                     }
-                    Text { text: "10 induction bands"; color: Theme.text-subtle; font-size: 11px; }
+                    Text { text: "10 induction bands"; color: Theme.text-subtle; font-size: 11px; vertical-alignment: center; }
                 }
             }
         }

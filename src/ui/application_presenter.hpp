@@ -46,8 +46,10 @@ private:
     void updateSensorRows();
     void acceptGeometry(models::FieldGeometry geometry);
     void acceptSlice(std::shared_ptr<const services::RenderedFieldSlice> slice);
+    void calculateField();
     void selectAxis(int axis);
     void selectPosition(float position);
+    void selectPosition(std::string_view position);
     void requestSlice();
     void setStatus(std::string_view message, int level = 0);
     [[nodiscard]] double axisExtent() const noexcept;
