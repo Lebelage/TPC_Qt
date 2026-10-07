@@ -71,9 +71,11 @@ set(TPC_SLINT_SOURCES
         src/services/settings_holder/settings_holder.hpp
         src/services/tpc_service/tpc_service.cpp
         src/services/tpc_service/tpc_service.hpp
-        src/ui/application_presenter.cpp
-        src/ui/application_presenter.hpp
+        src/ui/application_view_binding.cpp
+        src/ui/application_view_binding.hpp
         src/ui/file_dialog.hpp
+        src/viewmodels/application_view_model.cpp
+        src/viewmodels/application_view_model.hpp
 )
 
 if(APPLE)

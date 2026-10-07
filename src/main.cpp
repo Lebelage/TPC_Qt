@@ -10,7 +10,8 @@
 
 #include "application/application_context.hpp"
 #include "application/platform_paths.hpp"
-#include "ui/application_presenter.hpp"
+#include "ui/application_view_binding.hpp"
+#include "viewmodels/application_view_model.hpp"
 
 namespace {
 int runApplication() {
@@ -18,11 +19,12 @@ int runApplication() {
 
     auto main_window = MainWindow::create();
     auto field_window = FieldWindow::create();
-    tpc_slint::ui::ApplicationPresenter presenter{context, main_window, field_window};
+    tpc_slint::viewmodels::ApplicationViewModel view_model{context};
+    tpc_slint::ui::ApplicationViewBinding view_binding{view_model, main_window, field_window};
 
     if (const auto initialized = context.initialize(); !initialized) {
         std::cerr << "Settings were reset to defaults: " << initialized.error() << '\n';
-        presenter.showStartupError(initialized.error());
+        view_model.showStartupError(initialized.error());
     }
 
     main_window->run();

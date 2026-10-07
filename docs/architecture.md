@@ -4,24 +4,35 @@
 
 ```text
 Slint components (ui/app.slint)
-    -> ApplicationPresenter (src/ui)
-        -> Application services
-            -> Domain models
-            -> TPC_API
-            -> File system
+    -> ApplicationViewBinding (src/ui)
+        -> ApplicationViewModel (src/viewmodels)
+            -> Application services
+                -> Domain models
+                -> TPC_API
+                -> File system
 ```
 
-The `.slint` layer contains presentation and interaction declarations only.
-The generated Slint API is isolated in `ApplicationPresenter`, which translates
-UI callbacks and background service events. `main.cpp` only composes the
-context, windows, and presenter. Domain models and services do not include
-Slint types.
+The `.slint` layer is the View and contains presentation and interaction
+declarations only. `ApplicationViewModel` owns screen state, validation, and
+commands without depending on Slint. The generated Slint API is isolated in
+`ApplicationViewBinding`, a thin adapter that observes ViewModel state
+and forwards UI callbacks. `main.cpp` only composes the context, ViewModel,
+windows, and binding adapter. Domain models and services do not include Slint
+types.
+
+Screen snapshots share immutable sensor rows. Incoming frames use an identity
+index and format only changed measurement components; a new row snapshot is
+published only when the displayed values change. The Slint adapter keeps its
+table model, updates changed rows in place, and uploads slice pixels only when
+the rendered slice changes. ViewModel state is protected by a mutex; observer
+notifications and service calls happen after that mutex is released.
 
 ## Composition and lifetime
 
 `application::ApplicationContext` is the composition root. It owns the event
 dispatcher, persistence, and TPC/field services in dependency order. The
-presenter owns UI event subscriptions and is destroyed before the context.
+ViewModel owns service subscriptions. The binding adapter owns ViewModel
+subscriptions, and both are destroyed before the context.
 
 Initial settings are loaded after every subscriber is registered. Background
 TPC and slice-rendering workers are stopped before the event dispatcher is
@@ -35,7 +46,8 @@ generated UI objects.
 - `src/models`: toolkit-independent application and domain data.
 - `src/services`: application workflows, persistence, TPC integration, and
   field-slice rendering.
-- `src/ui`: the narrow adapter between generated Slint types and services.
+- `src/viewmodels`: toolkit-independent observable screen state and commands.
+- `src/ui`: the narrow adapter between generated Slint types and ViewModels.
 - `src/main.cpp`: minimal process entry point.
 
 ## TPC_API boundary
