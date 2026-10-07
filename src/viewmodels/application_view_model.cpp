@@ -114,6 +114,9 @@ void ApplicationViewModel::disconnect() {
 void ApplicationViewModel::calculateField() {
     {
         std::scoped_lock lock{mutex_};
+        if (main_state_.calculating) return;
+        main_state_.calculating = true;
+        calculation_error_.clear();
         main_state_.field_calculated = false;
         main_state_.status_message = "Calculating field…";
         main_state_.status_level = 0;
@@ -122,7 +125,16 @@ void ApplicationViewModel::calculateField() {
     }
     main_state_changed.invoke();
     field_state_changed.invoke();
-    context_.tpc().calculateField();
+    context_.events().diagnostic.invoke(services::LogLevel::Info, "calculation", "Calculation requested");
+    if (auto started = context_.tpc().calculateField(); !started) {
+        {
+            std::scoped_lock lock{mutex_};
+            main_state_.calculating = false;
+            field_state_.loading = false;
+        }
+        field_state_changed.invoke();
+        setStatus(started.error(), 2);
+    }
 }
 
 void ApplicationViewModel::reloadSettings() {
@@ -139,7 +151,7 @@ void ApplicationViewModel::applySettings(SettingsInput input) {
     const auto nz = parseInt(input.grid_nz);
     if (!length || !radius || !polling || !nx || !ny || !nz
         || *length <= 0.0 || *radius <= 0.0 || *polling <= 0
-        || *nx <= 0 || *ny <= 0 || *nz <= 0) {
+        || *nx < 2 || *ny < 2 || *nz < 2 || *nx > 1024 || *ny > 1024 || *nz > 1024) {
         setStatus("Settings contain invalid values", 2);
         return;
     }
@@ -247,8 +259,10 @@ void ApplicationViewModel::bindServiceEvents() {
         {
             std::scoped_lock lock{mutex_};
             main_state_.field_calculated = calculated;
-            main_state_.status_message = calculated ? "Field calculation completed" : "Field calculation failed";
-            main_state_.status_level = calculated ? 1 : 2;
+            main_state_.calculating = false;
+            main_state_.status_message = calculated ? "Field reconstruction completed; see scientific diagnostics"
+                : calculation_error_.empty() ? "Field calculation failed" : calculation_error_;
+            main_state_.status_level = calculated ? (main_state_.scientific_status.homogeneous ? 1 : 2) : 2;
             if (!calculated) {
                 field_state_.loading = false;
             }
@@ -258,6 +272,20 @@ void ApplicationViewModel::bindServiceEvents() {
             field_state_changed.invoke();
         }
     });
+    scientific_subscription_.subscribe(events.scientific_status_changed, [this](const models::ScientificStatus& status) {
+        {
+            std::scoped_lock lock{mutex_};
+            main_state_.scientific_status = status;
+        }
+        main_state_changed.invoke();
+    });
+    error_subscription_.subscribe(events.error_occurred, [this](std::string error) {
+        {
+            std::scoped_lock lock{mutex_};
+            calculation_error_ = error;
+        }
+        setStatus(error, 2);
+    });
     geometry_subscription_.subscribe(field_slices.field_available, [this](models::FieldGeometry geometry) {
         acceptGeometry(geometry);
     });
@@ -265,6 +293,14 @@ void ApplicationViewModel::bindServiceEvents() {
         field_slices.slice_rendered,
         [this](std::shared_ptr<const services::RenderedFieldSlice> slice) { acceptSlice(std::move(slice)); }
     );
+    slice_failure_subscription_.subscribe(field_slices.slice_failed, [this](std::string error) {
+        {
+            std::scoped_lock lock{mutex_};
+            field_state_.loading = false;
+        }
+        field_state_changed.invoke();
+        setStatus(error, 2);
+    });
 }
 
 void ApplicationViewModel::acceptSettings(const models::AppSettings& settings) {
@@ -430,6 +466,7 @@ void ApplicationViewModel::setStatus(std::string_view message, int level) {
         main_state_.status_message = message;
         main_state_.status_level = level;
     }
+    context_.events().diagnostic.invoke(level == 2 ? services::LogLevel::Error : services::LogLevel::Info, "ui", message);
     main_state_changed.invoke();
 }
 

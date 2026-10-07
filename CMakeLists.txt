@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(TPC_SLINT_EXPORT_COMPILE_COMMANDS "Generate compile_commands.json" ON)
 option(TPC_SLINT_COMPACT_RELEASE "Optimize Release builds for minimum size" OFF)
+option(TPC_SLINT_BUILD_SCIENTIFIC_TESTS "Build deterministic scientific validation tests" OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS "${TPC_SLINT_EXPORT_COMPILE_COMMANDS}")
 
 find_package(nlohmann_json REQUIRED)
@@ -51,6 +52,21 @@ elseif(TPC_API_DIR)
     endblock()
 endif()
 
+if(TPC_SLINT_BUILD_SCIENTIFIC_TESTS)
+    enable_testing()
+    add_executable(tpc_scientific_tests tests/scientific_tests.cpp)
+    target_include_directories(tpc_scientific_tests PRIVATE src)
+    target_compile_definitions(tpc_scientific_tests PRIVATE TPC_TEST_REFERENCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/tests/reference_map.json")
+    target_link_libraries(tpc_scientific_tests PRIVATE TPC::TPC nlohmann_json::nlohmann_json)
+    add_test(NAME scientific_validation COMMAND tpc_scientific_tests)
+    add_executable(tpc_logging_tests tests/logging_tests.cpp
+        src/services/logging/async_file_logger.cpp src/services/logging/logging_service.cpp
+        src/services/event_dispatcher/event_dispatcher.cpp)
+    target_include_directories(tpc_logging_tests PRIVATE src)
+    target_link_libraries(tpc_logging_tests PRIVATE TPC::TPC nlohmann_json::nlohmann_json)
+    add_test(NAME logging_validation COMMAND tpc_logging_tests)
+endif()
+
 set(TPC_SLINT_SOURCES
         src/main.cpp
         src/application/application_context.cpp
@@ -66,6 +82,10 @@ set(TPC_SLINT_SOURCES
         src/services/field_slice/field_slice_service.hpp
         src/services/file_worker/file_worker.cpp
         src/services/file_worker/file_worker.hpp
+        src/services/logging/async_file_logger.cpp
+        src/services/logging/async_file_logger.hpp
+        src/services/logging/logging_service.cpp
+        src/services/logging/logging_service.hpp
         src/services/scoped_subscription.hpp
         src/services/settings_holder/settings_holder.cpp
         src/services/settings_holder/settings_holder.hpp

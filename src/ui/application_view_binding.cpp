@@ -136,6 +136,10 @@ void ApplicationViewBinding::renderMain(const viewmodels::MainWindowViewState& s
     }
     main_window_->set_connected(state.connected);
     main_window_->set_field_calculated(state.field_calculated);
+    main_window_->set_calculating(state.calculating);
+    main_window_->set_data_quality(toSharedString(state.scientific_status.data_message));
+    main_window_->set_field_quality(toSharedString(state.scientific_status.field_message));
+    main_window_->set_homogeneous(state.scientific_status.homogeneous);
     main_window_->set_status_message(toSharedString(state.status_message));
     main_window_->set_status_level(state.status_level);
 }

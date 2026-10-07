@@ -54,6 +54,10 @@ export component MainWindow inherits Window {
     in-out property <int> current-tab: 0;
     in property <bool> connected: false;
     in property <bool> field-calculated: false;
+    in property <bool> calculating: false;
+    in property <string> data-quality: "Waiting for 36 fresh channels";
+    in property <string> field-quality: "No verified reconstruction";
+    in property <bool> homogeneous: false;
     in-out property <string> tpc-length: "10";
     in-out property <string> tpc-radius: "5";
     in-out property <string> endpoint: "opc.tcp://127.0.0.1:4840";
@@ -224,7 +228,7 @@ export component MainWindow inherits Window {
                                     padding-right: 12px;
                                     spacing: 4px;
                                     Text { text: "SENSOR"; width: 92px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; vertical-alignment: center; }
-                                    Text { text: "FIELD COMPONENTS, G"; width: 336px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
+                                    Text { text: "CHANNEL VALUES, G / mV"; width: 336px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
                                     Text { text: "COORDINATES, CM"; horizontal-stretch: 1; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
                                 }
                                 HorizontalLayout {
@@ -304,8 +308,10 @@ export component MainWindow inherits Window {
                     }
                     AppButton { text: "Export VTK"; active: root.field-calculated; clicked => { root.save-field(); } }
                     AppButton { text: "Open slices"; active: root.field-calculated; clicked => { root.visualize-field(); } }
-                    AppButton { text: "Calculate field"; primary: true; clicked => { root.calculate-field(); } }
+                    AppButton { text: root.calculating ? "Calculating…" : "Calculate field"; active: !root.calculating; primary: true; clicked => { root.calculate-field(); } }
                 }
+                Text { text: root.data-quality; color: Theme.text-muted; font-size: 11px; wrap: word-wrap; }
+                Text { text: root.field-quality; color: root.homogeneous ? Theme.success : Theme.warning; font-size: 11px; wrap: word-wrap; }
             }
 
             if root.current-tab == 1: VerticalLayout {

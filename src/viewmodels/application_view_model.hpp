@@ -10,6 +10,7 @@
 
 #include "models/field_slice_model.hpp"
 #include "models/tpc_data_model.hpp"
+#include "models/measurement_quality.hpp"
 #include "services/scoped_subscription.hpp"
 #include "tpc/utilities/event_handler.hpp"
 
@@ -45,6 +46,8 @@ struct MainWindowViewState {
         std::make_shared<const std::vector<SensorRowViewState>>()};
     bool connected{};
     bool field_calculated{};
+    bool calculating{};
+    models::ScientificStatus scientific_status;
     std::string tpc_length{"10"};
     std::string tpc_radius{"5"};
     std::string endpoint{"opc.tcp://127.0.0.1:1234"};
@@ -143,8 +146,12 @@ private:
     services::ScopedSubscription<const models::TpcDataModel::ReceivedFrame&> frame_subscription_;
     services::ScopedSubscription<bool> connection_subscription_;
     services::ScopedSubscription<bool> calculation_subscription_;
+    services::ScopedSubscription<const models::ScientificStatus&> scientific_subscription_;
+    services::ScopedSubscription<std::string> error_subscription_;
+    std::string calculation_error_;
     services::ScopedSubscription<models::FieldGeometry> geometry_subscription_;
     services::ScopedSubscription<std::shared_ptr<const services::RenderedFieldSlice>> slice_subscription_;
+    services::ScopedSubscription<std::string> slice_failure_subscription_;
 };
 
 }  // namespace tpc_slint::viewmodels

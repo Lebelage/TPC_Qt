@@ -45,6 +45,7 @@ public:
 
     tpc::utilities::event_handler<models::FieldGeometry> field_available;
     tpc::utilities::event_handler<std::shared_ptr<const RenderedFieldSlice>> slice_rendered;
+    tpc::utilities::event_handler<std::string> slice_failed;
 
     void requestSlice(int axis, double coordinate, int viewport_width, int viewport_height);
     void dispose() noexcept;
@@ -53,6 +54,7 @@ private:
     void onSettingsChanged(const models::AppSettings& settings);
     void onFieldWasCalculated(bool success);
 
+    EventDispatcher& events_;
     TpcService& tpc_;
     std::atomic<std::uint64_t> requested_generation_{0};
     std::mutex worker_mutex_;

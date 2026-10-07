@@ -117,7 +117,7 @@ namespace {
 
 }  // namespace
 
-FieldSliceService::FieldSliceService(EventDispatcher& events, TpcService& tpc) : tpc_(tpc) {
+FieldSliceService::FieldSliceService(EventDispatcher& events, TpcService& tpc) : events_(events), tpc_(tpc) {
     settings_subscription_.subscribe(
         events.settings_changed,
         [this](const models::AppSettings& settings) { onSettingsChanged(settings); }
@@ -181,12 +181,20 @@ void FieldSliceService::requestSlice(int axis, double coordinate, int viewport_w
             {static_cast<std::size_t>(grid_width), static_cast<std::size_t>(grid_height)},
             stop_token
         );
-        if (!numeric_slice || stop_token.stop_requested() || requested_generation_.load() != generation) {
+        if (stop_token.stop_requested() || requested_generation_.load() != generation) {
+            return;
+        }
+        if (!numeric_slice) {
+            slice_failed.invoke(numeric_slice.error());
             return;
         }
         auto rendered = renderSlice(std::move(*numeric_slice), stop_token);
         if (rendered && !stop_token.stop_requested() && requested_generation_.load() == generation) {
+            events_.diagnostic.invoke(LogLevel::Info, "slice", std::format(
+                "Slice rendered: axis={}, coordinate={} cm, grid={}x{}", axis, coordinate, grid_width, grid_height));
             slice_rendered.invoke(std::move(rendered));
+        } else if (!stop_token.stop_requested() && requested_generation_.load() == generation) {
+            slice_failed.invoke("Slice has no finite field values");
         }
     });
 }

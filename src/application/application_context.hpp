@@ -9,6 +9,7 @@
 #include "services/file_worker/file_worker.hpp"
 #include "services/settings_holder/settings_holder.hpp"
 #include "services/tpc_service/tpc_service.hpp"
+#include "services/logging/logging_service.hpp"
 
 namespace tpc_slint::application {
 
@@ -34,9 +35,11 @@ public:
     [[nodiscard]] services::SettingsHolderService& settings() noexcept { return settings_; }
     [[nodiscard]] services::TpcService& tpc() noexcept { return tpc_; }
     [[nodiscard]] services::FieldSliceService& fieldSlices() noexcept { return field_slices_; }
+    [[nodiscard]] const std::filesystem::path& logPath() noexcept { return logging_.logger().path(); }
 
 private:
     services::EventDispatcher events_;
+    services::LoggingService logging_;
     services::FileWorker file_worker_;
     services::SettingsHolderService settings_;
     services::TpcService tpc_;

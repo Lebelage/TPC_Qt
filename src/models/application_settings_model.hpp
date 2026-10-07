@@ -37,6 +37,15 @@ struct AppSettings {
     ConnectionParameters connection{"", 0};
     std::vector<SensorInfo> sensors_info{};
     std::array<std::size_t, 3> grid{};
+    struct AnalysisParameters {
+        double maximum_residual_gauss{0.2};
+        double maximum_radial_ratio{5.2e-4};
+        double minimum_axial_field_gauss{1.0};
+        int maximum_sample_age_ms{3000};
+        int maximum_frame_skew_ms{1000};
+        bool input_in_gauss{false};
+        std::string reference_map_path;
+    } analysis;
 };
 
 // SensorName is reconstructed from previewable_name (and later confirmed by
@@ -47,5 +56,8 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ConnectionParameters, endpoint, 
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TpcGeometryParams, length, radius)
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings, geometry, connection, sensors_info, grid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings::AnalysisParameters,
+    maximum_residual_gauss, maximum_radial_ratio, minimum_axial_field_gauss,
+    maximum_sample_age_ms, maximum_frame_skew_ms, input_in_gauss, reference_map_path)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings, geometry, connection, sensors_info, grid, analysis)
 }  // namespace tpc_slint::models

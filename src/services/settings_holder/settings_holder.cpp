@@ -41,7 +41,8 @@ void SettingsHolderService::applySettings() {
     // Parentheses are intentional: brace initialization would select
     // json::initializer_list and serialize the settings as a one-item array.
     const nlohmann::json settings_json(snapshot);
-    (void)file_worker_.writeSettings(settings_json.dump(4));
+    const auto written = file_worker_.writeSettings(settings_json.dump(4));
+    if (!written) events_.error_occurred.invoke("Settings persistence failed: " + written.error());
     events_.settings_changed.invoke(snapshot);
 }
 
@@ -71,8 +72,9 @@ std::expected<void, std::string> SettingsHolderService::loadSettings() {
         }
         applySettings();
         return {};
-    } catch (const std::exception&) {
-        return restoreDefaultSettings();
+    } catch (const std::exception& error) {
+        // Never overwrite a malformed scientific configuration with invented geometry.
+        return std::unexpected("Invalid settings; file preserved: " + std::string{error.what()});
     }
 }
 
@@ -164,30 +166,41 @@ void SettingsHolderService::setDefaultSensorPositions(
 }
 
 void SettingsHolderService::validateAndStore(models::AppSettings settings) {
-    current_settings_.connection.endpoint = settings.connection.endpoint.empty()
+    const auto& limits = settings.analysis;
+    if (!std::isfinite(limits.maximum_residual_gauss) || limits.maximum_residual_gauss <= 0
+        || !std::isfinite(limits.maximum_radial_ratio) || limits.maximum_radial_ratio <= 0
+        || !std::isfinite(limits.minimum_axial_field_gauss) || limits.minimum_axial_field_gauss <= 0
+        || limits.maximum_sample_age_ms <= 0 || limits.maximum_frame_skew_ms < 0)
+        throw std::runtime_error{"Invalid scientific reconstruction limits"};
+    settings.connection.endpoint = settings.connection.endpoint.empty()
         ? std::string{kDefaultEndpoint}
         : std::move(settings.connection.endpoint);
-    current_settings_.connection.polling_interval = settings.connection.polling_interval > 0
+    settings.connection.polling_interval = settings.connection.polling_interval > 0
         ? settings.connection.polling_interval
         : kDefaultPollingIntervalMs;
-    current_settings_.geometry.length = settings.geometry.length > 0.0 ? settings.geometry.length : 10.0;
-    current_settings_.geometry.radius = settings.geometry.radius > 0.0 ? settings.geometry.radius : 5.0;
+    if (!std::isfinite(settings.geometry.length) || !std::isfinite(settings.geometry.radius)
+        || settings.geometry.length <= 0 || settings.geometry.radius <= 0)
+        throw std::runtime_error{"Invalid TPC geometry; measured dimensions are required"};
 
     for (auto& dimension : settings.grid) {
-        if (dimension == 0) {
-            dimension = kDefaultGridSize;
-        }
+        if (dimension < 2 || dimension > 1024)
+            throw std::runtime_error{"Grid dimensions must be between 2 and 1024"};
     }
-    current_settings_.grid = settings.grid;
 
     // SensorName itself is not serialized. Reconstruct it from the persisted
     // display name so consumers can use saved sensors before OPC discovery.
     for (auto& sensor : settings.sensors_info) {
+        if (!std::isfinite(sensor.x) || !std::isfinite(sensor.y) || !std::isfinite(sensor.z))
+            throw std::runtime_error{"Sensor coordinates must be finite"};
         if (const auto name = models::SensorName::parse(sensor.previewable_name)) {
             sensor.name = *name;
+        } else {
+            throw std::runtime_error{"Invalid sensor identity in settings"};
         }
     }
-    mergeSensors(settings.sensors_info, true);
+    // Publish only after every field is validated, preserving the previous
+    // runtime configuration when a reload fails midway.
+    current_settings_ = std::move(settings);
 }
 
 void SettingsHolderService::mergeSensors(

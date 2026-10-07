@@ -38,7 +38,7 @@ public:
     [[nodiscard]] bool connectAsync(std::string endpoint);
     void disconnect();
 
-    void calculateField();
+    [[nodiscard]] std::expected<void, std::string> calculateField();
     [[nodiscard]] std::expected<models::NumericFieldSlice, std::string> calculateFieldSlice(
         int axis,
         double coordinate,
@@ -63,6 +63,10 @@ private:
     mutable std::mutex data_mutex_;
     models::TpcDataModel tpc_data_;
     std::size_t polling_interval_ms_{0};
+    models::AppSettings settings_snapshot_;
+    std::size_t settings_revision_{};
+    std::size_t calculation_revision_{};
+    bool field_snapshot_valid_{};
 
     std::unique_ptr<TpcServiceBackend> backend_;
 };

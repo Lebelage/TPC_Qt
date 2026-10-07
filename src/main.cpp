@@ -23,7 +23,7 @@ int runApplication() {
     tpc_slint::ui::ApplicationViewBinding view_binding{view_model, main_window, field_window};
 
     if (const auto initialized = context.initialize(); !initialized) {
-        std::cerr << "Settings were reset to defaults: " << initialized.error() << '\n';
+        std::cerr << "Settings initialization failed: " << initialized.error() << '\n';
         view_model.showStartupError(initialized.error());
     }
 
