@@ -18,42 +18,37 @@ That fallback requires `rustc` and `cargo` on `PATH`.
 
 ## Build
 
-Clone the project with its pinned dependency:
+Clone the project; the TPC API sources are included in the same repository:
 
 ```sh
-git clone --recurse-submodules https://github.com/Lebelage/TPC_Qt.git
+git clone --branch feature/slint-migration https://github.com/Lebelage/TPC_Qt.git
 cd TPC_Qt
-git checkout feature/slint-migration
-git submodule update --init --recursive
 ```
 
-After pulling application changes, run `git submodule update --init --recursive`
-again. A detached HEAD inside the submodule is normal: the application pins
-an exact API commit, not the API's `master` branch. Changes inside a submodule
-must be committed/published in that repository first; then update the gitlink
-in the application repository. Do not use `git submodule update --remote` to
-resolve build mismatches.
+`subprojects/tpc_api` is an ordinary tracked directory, not a Git submodule.
+Commit and push its changes together with the application. No separate clone,
+submodule initialization, or API repository push is required. Keep nested `.git`
+metadata out of this directory until the dependency is deliberately split into
+its own repository again.
 
-### Repair a copied dependency folder on Windows
+### Updating a previous submodule-based Windows checkout
 
-If `git submodule update` fails because `subprojects/tpc_api` is non-empty,
-and `git -C subprojects/tpc_api rev-parse HEAD` returns the application's commit,
-the folder is not an independent checkout. Run:
+Before pulling the conversion commit, preserve the old dependency directory
+(including any local changes and nested Git metadata). Then pull normally:
 
 ```powershell
 cd E:\TPC\TPC_Qt
-& .\scripts\repair-submodule.ps1
+$backupName = 'tpc_api_backup-' + [Guid]::NewGuid().ToString('N')
+Rename-Item -LiteralPath .\subprojects\tpc_api -NewName $backupName
+git pull --ff-only
 cmake --preset windows-release
 cmake --build .build/windows-release --target install
 ```
 
-The script preserves an unregistered folder as a timestamped
-`subprojects/tpc_api_backup-*`, initializes the pinned checkout and verifies
-its HEAD. Existing dirty registered submodules are left untouched. It does not
-reset, delete, commit, push or pull the application repository. Backups are
-ignored by Git and retained for comparison. No global Git settings or system
-PowerShell execution policy are changed. If your policy blocks unsigned scripts,
-review it and use your organization's approved execution method.
+The backup is retained and ignored by Git; compare local changes before removing
+it. Pull only after the conversion commit has been published to your branch,
+and preserve any application changes before pulling. Do not run
+`git submodule update` anymore. These commands do not change PowerShell policy.
 
 The macOS presets expect Ninja at `/opt/homebrew/bin/ninja` and vcpkg at
 `~/Tools/vcpkg`:
@@ -80,6 +75,6 @@ cmake --preset release
 cmake --build --preset package
 ```
 
-The bundled `subprojects/tpc_api` checkout is used by default. Set
+The bundled `subprojects/tpc_api` sources are used by default. Set
 `TPC_SLINT_USE_INSTALLED_TPC=ON` for an installed TPC package, or set
 `TPC_API_DIR` to another source checkout.

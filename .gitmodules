@@ -1,3 +1,0 @@
-[submodule "subprojects/tpc_api"]
-	path = subprojects/tpc_api
-	url = https://github.com/Lebelage/TPC_API.git

@@ -49,10 +49,9 @@ elseif(TPC_API_DIR)
     if(NOT EXISTS "${TPC_API_DIR}/include/tpc/system/models/telemetry.hpp"
        OR NOT EXISTS "${TPC_API_DIR}/include/tpc/analytics/models/field_quality.hpp")
         message(FATAL_ERROR
-            "TPC_API checkout is outdated/incomplete. Run git submodule update --init --recursive. "
-            "If subprojects/tpc_api is an ordinary non-empty folder, preserve it and run "
-            "scripts/repair-submodule.ps1 on Windows. See README.md. Do not use the API master branch; "
-            "use the commit pinned by this repository.")
+            "TPC_API sources are outdated/incomplete. Update the main repository, including "
+            "subprojects/tpc_api. This directory is tracked as ordinary source files, not a "
+            "Git submodule. See README.md.")
     endif()
     block()
         set(BUILD_SHARED_LIBS OFF)
