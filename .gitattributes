@@ -6,3 +6,4 @@
 CMakeLists.txt text eol=lf
 *.json text eol=lf
 *.qml text eol=lf
+*.ps1 text eol=crlf

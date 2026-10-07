@@ -18,6 +18,43 @@ That fallback requires `rustc` and `cargo` on `PATH`.
 
 ## Build
 
+Clone the project with its pinned dependency:
+
+```sh
+git clone --recurse-submodules https://github.com/Lebelage/TPC_Qt.git
+cd TPC_Qt
+git checkout feature/slint-migration
+git submodule update --init --recursive
+```
+
+After pulling application changes, run `git submodule update --init --recursive`
+again. A detached HEAD inside the submodule is normal: the application pins
+an exact API commit, not the API's `master` branch. Changes inside a submodule
+must be committed/published in that repository first; then update the gitlink
+in the application repository. Do not use `git submodule update --remote` to
+resolve build mismatches.
+
+### Repair a copied dependency folder on Windows
+
+If `git submodule update` fails because `subprojects/tpc_api` is non-empty,
+and `git -C subprojects/tpc_api rev-parse HEAD` returns the application's commit,
+the folder is not an independent checkout. Run:
+
+```powershell
+cd E:\TPC\TPC_Qt
+& .\scripts\repair-submodule.ps1
+cmake --preset windows-release
+cmake --build .build/windows-release --target install
+```
+
+The script preserves an unregistered folder as a timestamped
+`subprojects/tpc_api_backup-*`, initializes the pinned checkout and verifies
+its HEAD. Existing dirty registered submodules are left untouched. It does not
+reset, delete, commit, push or pull the application repository. Backups are
+ignored by Git and retained for comparison. No global Git settings or system
+PowerShell execution policy are changed. If your policy blocks unsigned scripts,
+review it and use your organization's approved execution method.
+
 The macOS presets expect Ninja at `/opt/homebrew/bin/ninja` and vcpkg at
 `~/Tools/vcpkg`:
 

@@ -46,6 +46,14 @@ elseif(TPC_API_DIR)
     if(NOT EXISTS "${TPC_API_DIR}/CMakeLists.txt")
         message(FATAL_ERROR "TPC_API_DIR does not contain CMakeLists.txt: '${TPC_API_DIR}'")
     endif()
+    if(NOT EXISTS "${TPC_API_DIR}/include/tpc/system/models/telemetry.hpp"
+       OR NOT EXISTS "${TPC_API_DIR}/include/tpc/analytics/models/field_quality.hpp")
+        message(FATAL_ERROR
+            "TPC_API checkout is outdated/incomplete. Run git submodule update --init --recursive. "
+            "If subprojects/tpc_api is an ordinary non-empty folder, preserve it and run "
+            "scripts/repair-submodule.ps1 on Windows. See README.md. Do not use the API master branch; "
+            "use the commit pinned by this repository.")
+    endif()
     block()
         set(BUILD_SHARED_LIBS OFF)
         add_subdirectory("${TPC_API_DIR}" "${CMAKE_BINARY_DIR}/TPC_API" EXCLUDE_FROM_ALL)

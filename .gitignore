@@ -21,3 +21,4 @@ Desktop.ini
 # Meson artifacts left by an optional subproject checkout
 /subprojects/.wraplock
 /subprojects/tpc_api/.meson-subproject-wrap-hash.txt
+/subprojects/tpc_api_backup*/
