@@ -1,0 +1,10 @@
+{
+  "name": "tpc",
+  "version-semver": "0.1.0",
+  "description": "TPC control and magnetic-field analytics library",
+  "dependencies": [
+    "eigen3",
+    "open62541pp",
+    "stdexec"
+  ]
+}
