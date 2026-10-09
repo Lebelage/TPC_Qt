@@ -7,7 +7,7 @@
 #include "models/tpc_data_model.hpp"
 #include "nlohmann/json.hpp"
 namespace tpc_slint::models {
-/** Persisted coordinates for one physical sensor. */
+/** Persisted Cartesian coordinates in millimetres for one physical sensor. */
 struct SensorInfo {
     SensorName name{};
 
@@ -28,11 +28,13 @@ struct ConnectionParameters {
 };
 
 struct TpcGeometryParams {
+    // Millimetres.
     double length{};
     double radius{};
 };
 
 struct AppSettings {
+    std::string coordinate_unit{"mm"};
     TpcGeometryParams geometry{0, 0};
     ConnectionParameters connection{"", 0};
     std::vector<SensorInfo> sensors_info{};
@@ -59,5 +61,5 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TpcGeometryParams, length, radiu
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings::AnalysisParameters,
     maximum_residual_gauss, maximum_radial_ratio, minimum_axial_field_gauss,
     maximum_sample_age_ms, maximum_frame_skew_ms, input_in_gauss, reference_map_path)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings, geometry, connection, sensors_info, grid, analysis)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(AppSettings, coordinate_unit, geometry, connection, sensors_info, grid, analysis)
 }  // namespace tpc_slint::models

@@ -3,6 +3,10 @@
 #include "tpc/tpc.hpp"
 #include "models/measurement_quality.hpp"
 #include "models/reference_field_map.hpp"
+#include "services/settings_holder/settings_holder.hpp"
+#include "services/file_worker/file_worker.hpp"
+#include "services/event_dispatcher/event_dispatcher.hpp"
+#include "services/field_slice/field_slice_service.hpp"
 #include <iostream>
 #include <numbers>
 #include <stdexcept>
@@ -45,7 +49,7 @@ void numerical() {
     }
     require(solver->calculate_svd_coefficients(generated).has_value(), "Repository synthetic frame is harmonic");
     require(!solver->export_to_vtk("unused.vtk"), "Export before fit must not throw/succeed");
-    for (double scale : {1.0, 100.0, 0.01}) {
+    for (double scale : {1.0, 100.0, 0.01, 350.0}) {
         auto data = measurements(scale);
         require(solver->calculate_svd_coefficients(data).has_value(), "Unit scaling must preserve rank");
         require(solver->field_quality().rank == 10, "Full ten-mode rank");
@@ -206,8 +210,124 @@ void warningsWorkflow() {
         "Received values retained and missing-value warning shown");
     require(!m::preparePreliminaryMeasurements(settings,{}), "No data remains a technical error");
 }
+void millimetreSettings() {
+    namespace s = tpc_slint::services;
+    const auto directory = std::filesystem::temp_directory_path()
+        / ("tpc-mm-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    struct Cleanup {
+        std::filesystem::path path;
+        ~Cleanup() { std::error_code error; std::filesystem::remove_all(path, error); }
+    } cleanup{directory};
+    s::EventDispatcher events;
+    s::FileWorker file{directory / "settings.json"};
+    s::SettingsHolderService settings{events, file};
+    require(settings.loadSettings().has_value(), "Measured defaults load");
+    auto current = settings.currentSettings();
+    require(current.coordinate_unit == "mm" && current.geometry.length == 4058
+        && current.geometry.radius == 1408.569 && current.sensors_info.size() == 12,
+        "Default volume and sensor positions use millimetres");
+    const auto w2 = std::ranges::find(current.sensors_info, std::string{"W2"}, &m::SensorInfo::previewable_name);
+    require(w2 != current.sensors_info.end() && std::abs(w2->x + 1219.856) < .001
+        && std::abs(w2->y - 704.285) < .001 && w2->z == 2029,
+        "Measured W2 coordinates and positive W side retained");
+    const auto e1 = std::ranges::find(current.sensors_info, std::string{"E1"}, &m::SensorInfo::previewable_name);
+    require(e1 != current.sensors_info.end() && e1->x == 0 && e1->z == -2029,
+        "Measured E side has negative Z");
+    auto solver = manager();
+    std::vector<a::models::Measurement> measured;
+    for (const auto& sensor : current.sensors_info) {
+        measured.push_back({{{sensor.x, sensor.y, sensor.z}, a::models::CoordinateType::Cartesian},
+            {{0, 0, 5000}, a::models::CoordinateType::Cylindric}});
+    }
+    require(solver->calculate_svd_coefficients(measured).has_value(),
+        "Reconstruction accepts actual sensor coordinates in millimetres");
+    const auto restored = cartesian(*solver, {1000, 200, 1800});
+    require(std::abs(restored[0]) < 1e-7 && std::abs(restored[1]) < 1e-7
+        && std::abs(restored[2] - 5000) < 1e-7, "Field preserved at millimetre-scale positions");
+    auto slice = solver->evaluate_field_slice(a::models::SliceDirection::Z, 2029, {8,8},
+        current.geometry.radius, current.geometry.length);
+    require(slice.has_value() && slice->horizontal_bounds[1] == 1408.569,
+        "Slice coordinates and bounds remain in millimetres");
+
+    nlohmann::json legacy(current);
+    legacy.erase("coordinate_unit");
+    legacy["geometry"] = {{"length", 7.0}, {"radius", 4.0}};
+    legacy["sensors_info"][0]["x"] = 4;
+    require(file.writeSettings(legacy.dump()).has_value() && settings.loadSettings().has_value(),
+        "Legacy example settings migrate");
+    current = settings.currentSettings();
+    require(current.coordinate_unit == "mm" && current.geometry.length == 4058
+        && current.sensors_info[0].x == 0 && current.sensors_info[0].z == 2029,
+        "Legacy example layout replaced by measured layout");
+    const auto saved = *file.loadSettings();
+    require(settings.loadSettings().has_value() && *file.loadSettings() == saved,
+        "Reload does not multiply millimetres again");
+
+    legacy["coordinate_unit"] = "cm";
+    legacy["geometry"] = {{"length", 500.0}, {"radius", 200.0}};
+    legacy["sensors_info"].push_back({{"previewable_name", "E7"}, {"x", 12.0}, {"y", 3.0}, {"z", -4.0}});
+    require(file.writeSettings(legacy.dump()).has_value() && settings.loadSettings().has_value(),
+        "Explicit centimetre settings migrate");
+    current = settings.currentSettings();
+    require(current.geometry.length == 5000 && current.geometry.radius == 2000
+        && current.sensors_info.back().x == 120 && current.sensors_info.back().z == -40,
+        "Custom volume and channels absent from measured file convert cm to mm");
+    legacy["coordinate_unit"] = "m";
+    const auto invalid = legacy.dump();
+    require(file.writeSettings(invalid).has_value() && !settings.loadSettings()
+        && *file.loadSettings() == invalid, "Unsupported units rejected without overwriting settings");
+
+    nlohmann::json map;
+    { std::ifstream input{TPC_TEST_REFERENCE_PATH}; input >> map; }
+    const auto mmPath = directory / "mm-map.json";
+    const auto cmPath = directory / "cm-map.json";
+    s::FileWorker mmFile{mmPath}, cmFile{cmPath};
+    require(mmFile.writeSettings(map.dump()).has_value(), "Millimetre reference fixture written");
+    map["coordinate_unit"] = "cm";
+    for (const auto axis : {"x", "y", "z"})
+        for (auto& value : map[axis]) value = value.get<double>() / 10.0;
+    require(cmFile.writeSettings(map.dump()).has_value(), "Centimetre reference fixture written");
+    auto mm = m::ReferenceFieldMap::load(mmPath);
+    auto cm = m::ReferenceFieldMap::load(cmPath);
+    require(mm && cm, "Both reference units load");
+    const auto bmm = (*mm)->evaluate({1,2,3});
+    const auto bcm = (*cm)->evaluate({1,2,3});
+    require(bmm && bcm && *bmm == *bcm, "Centimetre reference axes convert to identical millimetre evaluations");
+}
+void fieldProbe() {
+    tpc_slint::services::RenderedFieldSlice slice;
+    slice.width = 3;
+    slice.height = 3;
+    slice.axis = 2;
+    slice.coordinate = 100;
+    slice.u_range = {-20,20};
+    slice.v_range = {-30,30};
+    slice.valid.assign(9, 1);
+    for (int n = 0; n < 9; ++n) slice.field.insert(slice.field.end(), {double(n), .5, 5000});
+    // Square image in a wide viewport: centred with 50px side margins.
+    require(!slice.probe(49,50,200,100) && !slice.probe(150,50,200,100),
+        "Hover ignores centred image margins");
+    auto centre = slice.probe(100,50,200,100);
+    require(centre && centre->position_mm == std::array<double,3>{0,0,100}
+        && centre->cartesian_field[0] == 4, "Hover matches the displayed centre grid sample");
+    auto top = slice.probe(51,1,200,100);
+    require(top && top->position_mm == std::array<double,3>{-20,30,100},
+        "Hover maps image top to positive vertical coordinate");
+    slice.valid[0] = 0;
+    require(!slice.probe(51,1,200,100), "Outside-cylinder mask suppresses hover values");
+    slice.axis = 0;
+    centre = slice.probe(100,50,200,100);
+    require(centre && centre->position_mm == std::array<double,3>{100,0,0}, "X slice maps Y/Z correctly");
+    slice.axis = 1;
+    centre = slice.probe(100,50,200,100);
+    require(centre && centre->position_mm == std::array<double,3>{0,100,0}, "Y slice maps X/Z correctly");
+    require(!slice.probe(-1,50,200,100) && !slice.probe(100,50,0,100),
+        "Invalid hover positions and viewport dimensions ignored");
+    slice.field[12] = std::numeric_limits<double>::quiet_NaN();
+    require(!slice.probe(100,50,200,100), "Non-finite field samples never displayed");
+}
 int main() {
-    try { numerical(); telemetry(); reference(); warningsWorkflow(); }
+    try { numerical(); telemetry(); reference(); warningsWorkflow(); millimetreSettings(); fieldProbe(); }
     catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
     std::cout << checks << " scientific checks passed\n";
 }

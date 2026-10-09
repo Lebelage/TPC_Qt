@@ -58,8 +58,8 @@ export component MainWindow inherits Window {
     in property <string> data-quality: "Waiting for 36 fresh channels";
     in property <string> field-quality: "No verified reconstruction";
     in property <bool> homogeneous: false;
-    in-out property <string> tpc-length: "10";
-    in-out property <string> tpc-radius: "5";
+    in-out property <string> tpc-length: "4058";
+    in-out property <string> tpc-radius: "1408.569";
     in-out property <string> endpoint: "opc.tcp://127.0.0.1:4840";
     in-out property <string> polling-interval: "100";
     in-out property <string> grid-nx: "10";
@@ -229,7 +229,7 @@ export component MainWindow inherits Window {
                                     spacing: 4px;
                                     Text { text: "SENSOR"; width: 92px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; vertical-alignment: center; }
                                     Text { text: "CHANNEL VALUES, G / mV"; width: 336px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
-                                    Text { text: "COORDINATES, CM"; horizontal-stretch: 1; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
+                                    Text { text: "COORDINATES, MM"; horizontal-stretch: 1; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
                                 }
                                 HorizontalLayout {
                                     padding-left: 12px;
@@ -335,9 +335,9 @@ export component MainWindow inherits Window {
                             height: 208px;
                             title: "TPC geometry";
                             description: "Physical dimensions used for reconstruction and slice bounds.";
-                            FormLabel { text: "Length, cm"; }
+                            FormLabel { text: "Length, mm"; }
                             DarkInput { text <=> root.tpc-length; }
-                            FormLabel { text: "Radius, cm"; }
+                            FormLabel { text: "Radius, mm"; }
                             DarkInput { text <=> root.tpc-radius; }
                         }
                         SettingsCard {
@@ -416,12 +416,14 @@ export component FieldWindow inherits Window {
     in property <float> minimum-value: 0;
     in property <float> maximum-value: 0;
     in property <string> position-label: "—";
+    in-out property <string> probe-text: "";
 
     callback axis-changed(int);
     callback position-changed(float);
     callback position-entered(string);
     callback calculate-field();
     callback viewport-changed(float, float);
+    callback inspect-field(float, float, float, float) -> string;
 
     VerticalLayout {
         padding: 18px;
@@ -484,6 +486,43 @@ export component FieldWindow inherits Window {
                     image-fit: contain;
                     init => { root.viewport-changed(self.width / 1px, self.height / 1px); }
                 }
+                field-pointer := TouchArea {
+                    x: image-area.x; y: image-area.y;
+                    width: image-area.width; height: image-area.height;
+                    pointer-event(event) => {
+                        if event.kind == PointerEventKind.move {
+                            root.probe-text = root.available && !root.loading
+                                ? root.inspect-field(self.mouse-x / 1px, self.mouse-y / 1px,
+                                    self.width / 1px, self.height / 1px) : "";
+                        }
+                    }
+                }
+                if field-pointer.has-hover && root.available && !root.loading && root.probe-text != "": Rectangle {
+                    // A compact readout away from the selected point; no full-span crosshair.
+                    x: max(6px, min(parent.width - self.width - 6px,
+                        field-pointer.x + field-pointer.mouse-x + 18px + self.width > parent.width - 6px
+                            ? field-pointer.x + field-pointer.mouse-x - self.width - 18px
+                            : field-pointer.x + field-pointer.mouse-x + 18px));
+                    y: max(6px, min(parent.height - self.height - 6px,
+                        field-pointer.y + field-pointer.mouse-y + 18px + self.height > parent.height - 6px
+                            ? field-pointer.y + field-pointer.mouse-y - self.height - 18px
+                            : field-pointer.y + field-pointer.mouse-y + 18px));
+                    width: min(386px, parent.width - 12px);
+                    height: 126px;
+                    background: #111923f2;
+                    border-color: #3c4858;
+                    border-width: 1px;
+                    border-radius: 5px;
+                    Text {
+                        x: 12px; y: 10px;
+                        width: parent.width - 24px; height: parent.height - 20px;
+                        text: root.probe-text;
+                        color: #d3dce6;
+                        font-family: "monospace";
+                        font-size: 11px;
+                        vertical-alignment: center;
+                    }
+                }
                 if root.loading: Spinner { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
                 if !root.available: VerticalLayout {
                     alignment: center;
@@ -527,7 +566,7 @@ export component FieldWindow inherits Window {
                     }
                     Text {
                         width: 70px;
-                        text: root.maximum-position + " cm";
+                        text: root.maximum-position + " mm";
                         color: Theme.text-muted;
                         font-family: "monospace";
                         font-size: 11px;

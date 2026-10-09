@@ -48,8 +48,8 @@ struct MainWindowViewState {
     bool field_calculated{};
     bool calculating{};
     models::ScientificStatus scientific_status;
-    std::string tpc_length{"10"};
-    std::string tpc_radius{"5"};
+    std::string tpc_length{"4058"};
+    std::string tpc_radius{"1408.569"};
     std::string endpoint{"opc.tcp://127.0.0.1:1234"};
     std::string polling_interval{"1000"};
     std::string grid_nx{"32"};
@@ -111,6 +111,8 @@ public:
     void selectPosition(float position);
     void selectPosition(std::string_view position);
     void setViewport(float width, float height);
+    [[nodiscard]] std::string inspectField(float x, float y, float width, float height,
+        const std::shared_ptr<const services::RenderedFieldSlice>& displayed_slice) const;
 
     tpc::utilities::event_handler<> main_state_changed;
     tpc::utilities::event_handler<> settings_state_changed;

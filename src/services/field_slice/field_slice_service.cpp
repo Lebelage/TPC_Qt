@@ -30,6 +30,8 @@ namespace {
 
 [[nodiscard]] std::shared_ptr<const RenderedFieldSlice> renderSlice(
     models::NumericFieldSlice slice,
+    int axis,
+    double coordinate,
     std::stop_token stop_token
 ) {
     const auto width = slice.grid[0];
@@ -41,6 +43,8 @@ namespace {
     }
 
     auto result = std::make_shared<RenderedFieldSlice>();
+    result->axis = axis;
+    result->coordinate = coordinate;
     result->width = width;
     result->height = height;
     result->rgba.assign(pixel_count * 4, 0);
@@ -188,10 +192,10 @@ void FieldSliceService::requestSlice(int axis, double coordinate, int viewport_w
             slice_failed.invoke(numeric_slice.error());
             return;
         }
-        auto rendered = renderSlice(std::move(*numeric_slice), stop_token);
+        auto rendered = renderSlice(std::move(*numeric_slice), axis, coordinate, stop_token);
         if (rendered && !stop_token.stop_requested() && requested_generation_.load() == generation) {
             events_.diagnostic.invoke(LogLevel::Info, "slice", std::format(
-                "Slice rendered: axis={}, coordinate={} cm, grid={}x{}", axis, coordinate, grid_width, grid_height));
+                "Slice rendered: axis={}, coordinate={} mm, grid={}x{}", axis, coordinate, grid_width, grid_height));
             slice_rendered.invoke(std::move(rendered));
         } else if (!stop_token.stop_requested() && requested_generation_.load() == generation) {
             slice_failed.invoke("Slice has no finite field values");

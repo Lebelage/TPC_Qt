@@ -4,7 +4,6 @@
 #include <cmath>
 #include <exception>
 #include <iterator>
-#include <numbers>
 #include <ranges>
 #include <stdexcept>
 #include <string_view>
@@ -19,6 +18,28 @@ namespace {
 constexpr std::string_view kDefaultEndpoint = "opc.tcp://127.0.0.1:1234";
 constexpr int kDefaultPollingIntervalMs = 1000;
 constexpr std::size_t kDefaultGridSize = 32;
+// Initial calculation volume bounded by the measured sensor ring and end planes.
+constexpr double kDefaultLengthMm = 4058.0;
+constexpr double kDefaultRadiusMm = 1408.569;
+struct SensorPosition {
+    std::string_view name;
+    float x, y, z;
+};
+// sensors_coords.txt: Cartesian millimetres; W is +Z, E is -Z.
+constexpr std::array kSensorPositions{
+    SensorPosition{"W1", 0.000f, 1408.569f, 2029.000f},
+    SensorPosition{"W2", -1219.856f, 704.285f, 2029.000f},
+    SensorPosition{"W3", -1219.856f, -704.285f, 2029.000f},
+    SensorPosition{"W4", 0.000f, -1408.569f, 2029.000f},
+    SensorPosition{"W5", 1219.856f, -704.285f, 2029.000f},
+    SensorPosition{"W6", 1219.856f, 704.285f, 2029.000f},
+    SensorPosition{"E1", 0.000f, 1408.569f, -2029.000f},
+    SensorPosition{"E2", -1219.856f, 704.285f, -2029.000f},
+    SensorPosition{"E3", -1219.856f, -704.285f, -2029.000f},
+    SensorPosition{"E4", 0.000f, -1408.569f, -2029.000f},
+    SensorPosition{"E5", 1219.856f, -704.285f, -2029.000f},
+    SensorPosition{"E6", 1219.856f, 704.285f, -2029.000f}
+};
 }  // namespace
 
 SettingsHolderService::SettingsHolderService(EventDispatcher& events, FileWorker& file_worker)
@@ -66,6 +87,29 @@ std::expected<void, std::string> SettingsHolderService::loadSettings() {
         }
 
         auto settings = settings_json.get<models::AppSettings>();
+        // Files predating coordinate_unit used centimetres. Migrate once and
+        // persist mm so subsequent loads cannot scale the coordinates again.
+        const auto unit = settings_json.value("coordinate_unit", std::string{"cm"});
+        if (unit == "cm") {
+            const bool old_example_geometry =
+                (settings.geometry.length == 7.0 && settings.geometry.radius == 4.0)
+                || (settings.geometry.length == 10.0 && settings.geometry.radius == 5.0);
+            settings.geometry.length *= 10.0;
+            settings.geometry.radius *= 10.0;
+            for (auto& sensor : settings.sensors_info) {
+                sensor.x *= 10.f;
+                sensor.y *= 10.f;
+                sensor.z *= 10.f;
+            }
+            // Replace the former example layout with supplied measurements.
+            setDefaultSensorPositions(settings.sensors_info);
+            if (old_example_geometry) {
+                settings.geometry = {kDefaultLengthMm, kDefaultRadiusMm};
+            }
+        } else if (unit != "mm") {
+            throw std::runtime_error{"Settings coordinate_unit must be mm or cm"};
+        }
+        settings.coordinate_unit = "mm";
         {
             std::scoped_lock lock{mutex_};
             validateAndStore(std::move(settings));
@@ -88,8 +132,8 @@ void SettingsHolderService::setConnectionParameters(models::ConnectionParameters
 
 void SettingsHolderService::setGeometryParameters(models::TpcGeometryParams parameters) {
     std::scoped_lock lock{mutex_};
-    current_settings_.geometry.length = parameters.length > 0.0 ? parameters.length : 10.0;
-    current_settings_.geometry.radius = parameters.radius > 0.0 ? parameters.radius : 5.0;
+    current_settings_.geometry.length = parameters.length > 0.0 ? parameters.length : kDefaultLengthMm;
+    current_settings_.geometry.radius = parameters.radius > 0.0 ? parameters.radius : kDefaultRadiusMm;
 }
 
 void SettingsHolderService::setGridParameters(std::array<std::size_t, 3> grid) {
@@ -109,12 +153,21 @@ models::AppSettings SettingsHolderService::currentSettings() const {
 }
 
 models::AppSettings SettingsHolderService::defaultSettings() {
-    return {
-        .geometry = {10.0, 5.0},
+    models::AppSettings settings{
+        .geometry = {kDefaultLengthMm, kDefaultRadiusMm},
         .connection = {std::string{kDefaultEndpoint}, kDefaultPollingIntervalMs},
         .sensors_info = {},
         .grid = {kDefaultGridSize, kDefaultGridSize, kDefaultGridSize}
     };
+    for (const auto& position : kSensorPositions) {
+        models::SensorInfo sensor;
+        sensor.setName(*models::SensorName::parse(position.name));
+        sensor.x = position.x;
+        sensor.y = position.y;
+        sensor.z = position.z;
+        settings.sensors_info.push_back(sensor);
+    }
+    return settings;
 }
 
 std::expected<void, std::string> SettingsHolderService::restoreDefaultSettings() {
@@ -133,36 +186,14 @@ std::expected<void, std::string> SettingsHolderService::restoreDefaultSettings()
     return {};
 }
 
-void SettingsHolderService::setDefaultSensorPositions(
-    std::vector<models::SensorInfo>& sensors,
-    models::TpcGeometryParams geometry
-) {
-    const auto place_on_base = [&](models::SensorNameKey id, double z) {
-        const auto sensor_count = static_cast<std::size_t>(std::ranges::count(sensors, id, [](const auto& sensor) {
-            return sensor.name.id;
-        }));
-        if (sensor_count == 0) {
-            return;
-        }
-
-        std::size_t index = 0;
-        for (auto& sensor : sensors) {
-            if (sensor.name.id != id) {
-                continue;
-            }
-
-            const double angle = 2.0 * std::numbers::pi * static_cast<double>(index)
-                / static_cast<double>(sensor_count);
-            sensor.x = static_cast<float>(geometry.radius * std::cos(angle));
-            sensor.y = static_cast<float>(geometry.radius * std::sin(angle));
-            sensor.z = static_cast<float>(z);
-            ++index;
-        }
-    };
-
-    const double half_length = geometry.length * 0.5;
-    place_on_base(models::SensorNameKey::E, half_length);
-    place_on_base(models::SensorNameKey::W, -half_length);
+void SettingsHolderService::setDefaultSensorPositions(std::vector<models::SensorInfo>& sensors) {
+    for (auto& sensor : sensors) {
+        const auto position = std::ranges::find(kSensorPositions, sensor.previewable_name, &SensorPosition::name);
+        if (position == kSensorPositions.end()) continue;
+        sensor.x = position->x;
+        sensor.y = position->y;
+        sensor.z = position->z;
+    }
 }
 
 void SettingsHolderService::validateAndStore(models::AppSettings settings) {
@@ -261,7 +292,7 @@ void SettingsHolderService::onInitializationDataReceived(std::vector<models::Sen
 
     {
         std::scoped_lock lock{mutex_};
-        //setDefaultSensorPositions(sensors, current_settings_.geometry);
+        setDefaultSensorPositions(sensors);
         mergeSensors(sensors, false);
     }
 

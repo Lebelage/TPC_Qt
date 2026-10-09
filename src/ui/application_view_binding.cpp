@@ -112,9 +112,13 @@ void ApplicationViewBinding::bindUiCallbacks() {
     field_window_->on_viewport_changed([this](float width, float height) {
         view_model_.setViewport(width, height);
     });
+    field_window_->on_inspect_field([this](float x, float y, float width, float height) {
+        return toSharedString(view_model_.inspectField(x, y, width, height, rendered_slice_));
+    });
 }
 
 void ApplicationViewBinding::renderMain(const viewmodels::MainWindowViewState& state) {
+    if (!state.field_calculated) field_window_->set_probe_text(slint::SharedString{});
     if (rendered_rows_ != state.sensor_rows) {
         const auto& source = *state.sensor_rows;
         if (!sensor_model_ || !rendered_rows_ || rendered_rows_->size() != source.size()) {
@@ -155,6 +159,7 @@ void ApplicationViewBinding::renderSettings(const viewmodels::MainWindowViewStat
 }
 
 void ApplicationViewBinding::renderField(const viewmodels::FieldWindowViewState& state) {
+    field_window_->set_probe_text(slint::SharedString{});
     field_window_->set_available(state.available);
     field_window_->set_loading(state.loading);
     field_window_->set_axis_index(state.axis_index);

@@ -25,14 +25,16 @@ public:
             if (!input) return std::unexpected("Cannot open reference field map");
             nlohmann::json json;
             input >> json;
-            if (json.at("coordinate_unit") != "cm" || json.at("field_unit") != "G"
+            const auto unit = json.at("coordinate_unit").get<std::string>();
+            if ((unit != "mm" && unit != "cm") || json.at("field_unit") != "G"
                 || json.at("components") != "Cartesian")
-                return std::unexpected("Reference map must declare cm, G and Cartesian components");
+                return std::unexpected("Reference map must declare mm (or legacy cm), G and Cartesian components");
             auto result = std::make_shared<ReferenceFieldMap>();
             result->axes_ = {json.at("x").get<std::vector<double>>(), json.at("y").get<std::vector<double>>(),
                 json.at("z").get<std::vector<double>>()};
             std::size_t count = 1;
-            for (const auto& axis : result->axes_) {
+            for (auto& axis : result->axes_) {
+                if (unit == "cm") for (auto& value : axis) value *= 10.0;
                 if (axis.size() < 2 || axis.size() > 1024 || count > 4'000'000 / axis.size())
                     return std::unexpected("Invalid reference grid dimensions");
                 for (std::size_t i = 0; i < axis.size(); ++i)

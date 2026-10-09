@@ -177,6 +177,31 @@ void ApplicationViewModel::exportField(std::string_view path_text) {
     setStatus(saved ? "VTK field exported successfully" : "Could not export the VTK field", saved ? 1 : 2);
 }
 
+std::string ApplicationViewModel::inspectField(float x, float y, float width, float height,
+    const std::shared_ptr<const services::RenderedFieldSlice>& displayed_slice) const {
+    std::scoped_lock lock{mutex_};
+    if (!main_state_.field_calculated || !field_state_.available || field_state_.loading
+        || !displayed_slice || displayed_slice != field_state_.rendered_slice
+        || displayed_slice->axis != field_state_.axis_index || displayed_slice->coordinate != position_) return {};
+    const auto sample = field_state_.rendered_slice->probe(x, y, width, height);
+    if (!sample) return {};
+    const auto& p = sample->position_mm;
+    const auto& b = sample->cartesian_field;
+    const bool preliminary = main_state_.scientific_status.field_message.starts_with("PRELIMINARY");
+    const auto unit = preliminary ? "G / mV" : "G";
+    const double magnitude = std::hypot(b[0], b[1], b[2]);
+    const double radius = std::hypot(p[0], p[1]);
+    std::string cylindrical = "Br / Bφ undefined on axis";
+    if (radius > 1e-9) {
+        const double br = (b[0] * p[0] + b[1] * p[1]) / radius;
+        const double bf = (-b[0] * p[1] + b[1] * p[0]) / radius;
+        cylindrical = std::format("Br {:+.5f}   Bφ {:+.5f}", br, bf);
+    }
+    return std::format("{} · {}\n|B|  {:.5f} {}\nX {:+.2f}   Y {:+.2f}   Z {:+.2f} mm\n{}\nBz {:+.5f} {}\nBx {:+.5f}   By {:+.5f}",
+        preliminary ? "PRELIMINARY" : "Reconstructed field", "grid sample", magnitude, unit,
+        p[0], p[1], p[2], cylindrical, b[2], unit, b[0], b[1]);
+}
+
 void ApplicationViewModel::selectAxis(int axis) {
     {
         std::scoped_lock lock{mutex_};
@@ -444,7 +469,7 @@ bool ApplicationViewModel::requestSlice() {
         field_state_.loading = true;
         static constexpr std::array<std::string_view, 3> axis_names{"X", "Y", "Z"};
         field_state_.position_label = std::format(
-            "{} = {:.5g} cm", axis_names[static_cast<std::size_t>(field_state_.axis_index)], position_
+            "{} = {:.5g} mm", axis_names[static_cast<std::size_t>(field_state_.axis_index)], position_
         );
         axis = field_state_.axis_index;
         position = position_;

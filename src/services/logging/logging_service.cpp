@@ -32,7 +32,7 @@ LoggingService::LoggingService(EventDispatcher& events, std::filesystem::path fi
     settings_subscription_.subscribe(events.settings_changed, [this](const models::AppSettings& settings) {
         // Deliberately omit endpoint/authentication and actual channel data.
         logger_.write(LogLevel::Info, "settings", std::format(
-            "Settings applied: {} sensors; radius={} cm; length={} cm; grid={}x{}x{}; reference={}",
+            "Settings applied: {} sensors; radius={} mm; length={} mm; grid={}x{}x{}; reference={}",
             settings.sensors_info.size(), settings.geometry.radius, settings.geometry.length,
             settings.grid[0], settings.grid[1], settings.grid[2], !settings.analysis.reference_map_path.empty()));
     });

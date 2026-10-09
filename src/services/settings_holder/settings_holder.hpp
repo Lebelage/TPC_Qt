@@ -39,10 +39,7 @@ public:
 private:
     [[nodiscard]] static models::AppSettings defaultSettings();
     [[nodiscard]] std::expected<void, std::string> restoreDefaultSettings();
-    static void setDefaultSensorPositions(
-        std::vector<models::SensorInfo>& sensors,
-        models::TpcGeometryParams geometry
-    );
+    static void setDefaultSensorPositions(std::vector<models::SensorInfo>& sensors);
     void validateAndStore(models::AppSettings settings);
     void mergeSensors(const std::vector<models::SensorInfo>& sensors, bool replace_coordinates);
     void onInitializationDataReceived(std::vector<models::SensorName> sensor_names);

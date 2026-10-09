@@ -61,7 +61,10 @@ endif()
 
 if(TPC_SLINT_BUILD_SCIENTIFIC_TESTS)
     enable_testing()
-    add_executable(tpc_scientific_tests tests/scientific_tests.cpp)
+    add_executable(tpc_scientific_tests tests/scientific_tests.cpp
+        src/services/settings_holder/settings_holder.cpp
+        src/services/file_worker/file_worker.cpp
+        src/services/event_dispatcher/event_dispatcher.cpp)
     target_include_directories(tpc_scientific_tests PRIVATE src)
     target_compile_definitions(tpc_scientific_tests PRIVATE TPC_TEST_REFERENCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/tests/reference_map.json")
     target_link_libraries(tpc_scientific_tests PRIVATE TPC::TPC nlohmann_json::nlohmann_json)
