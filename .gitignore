@@ -5,6 +5,7 @@
 /out/
 /vcpkg_installed/
 /compile_commands.json
+/CMakeUserPresets.json
 
 # IDE-local state
 /.idea/

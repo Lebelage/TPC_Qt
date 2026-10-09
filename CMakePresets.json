@@ -10,6 +10,9 @@
       "name": "common",
       "hidden": true,
       "generator": "Ninja",
+      "binaryDir": "${sourceDir}/.build/${presetName}",
+      "installDir": "${sourceDir}/out/${presetName}",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "warnings": {
         "dev": true,
         "deprecated": true,
@@ -20,10 +23,32 @@
       "cacheVariables": {
         "BUILD_TESTING": "OFF",
         "TPC_INSTALL": "OFF",
+        "TPC_SLINT_USE_INSTALLED_TPC": "OFF",
+        "TPC_API_DIR": "${sourceDir}/subprojects/tpc_api",
         "VCPKG_APPLOCAL_DEPS": "ON"
       },
       "environment": {
         "VCPKG_DISABLE_METRICS": "1"
+      }
+    },
+    {
+      "name": "debug-mode",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
+        "TPC_SLINT_COMPACT_RELEASE": "OFF",
+        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "release-mode",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+        "TPC_SLINT_COMPACT_RELEASE": "ON",
+        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "OFF"
       }
     },
     {
@@ -35,13 +60,8 @@
         "lhs": "${hostSystemName}",
         "rhs": "Darwin"
       },
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "environment": {
-        "VCPKG_ROOT": "$penv{HOME}/Tools/vcpkg",
-        "PATH": "/opt/homebrew/bin:$penv{PATH}"
-      },
-      "cacheVariables": {
-        "CMAKE_MAKE_PROGRAM": "/opt/homebrew/bin/ninja"
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:$penv{PATH}"
       }
     },
     {
@@ -52,64 +72,31 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
-      },
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
     },
     {
       "name": "debug",
       "displayName": "Debug (macOS)",
       "description": "Debug build with symbols and compile_commands.json",
-      "inherits": "macos",
-      "binaryDir": "${sourceDir}/.build/debug",
-      "installDir": "${sourceDir}/out/debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
-        "TPC_SLINT_COMPACT_RELEASE": "OFF",
-        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "ON"
-      }
+      "inherits": ["macos", "debug-mode"]
     },
     {
       "name": "release",
       "displayName": "Release (macOS)",
       "description": "Size-optimized Release build with link-time optimization",
-      "inherits": "macos",
-      "binaryDir": "${sourceDir}/.build/release",
-      "installDir": "${sourceDir}/out/release",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-        "TPC_SLINT_COMPACT_RELEASE": "ON",
-        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "OFF"
-      }
+      "inherits": ["macos", "release-mode"]
     },
     {
       "name": "windows-debug",
       "displayName": "Debug (Windows)",
       "description": "Debug build with symbols and compile_commands.json",
-      "inherits": "windows",
-      "binaryDir": "${sourceDir}/.build/windows-debug",
-      "installDir": "${sourceDir}/out/windows-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "OFF",
-        "TPC_SLINT_COMPACT_RELEASE": "OFF",
-        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "ON"
-      }
+      "inherits": ["windows", "debug-mode"]
     },
     {
       "name": "windows-release",
       "displayName": "Release (Windows)",
       "description": "Size-optimized Release build with link-time optimization",
-      "inherits": "windows",
-      "binaryDir": "${sourceDir}/.build/windows-release",
-      "installDir": "${sourceDir}/out/windows-release",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-        "TPC_SLINT_COMPACT_RELEASE": "ON",
-        "TPC_SLINT_EXPORT_COMPILE_COMMANDS": "OFF"
-      }
+      "inherits": ["windows", "release-mode"]
     }
   ],
   "buildPresets": [
