@@ -10,6 +10,7 @@ target("open62541")
             add_defines("UA_FLOAT_IEEE754=1", "UA_FLOAT_LITTLE_ENDIAN=1", {public = true})
         end
     elseif is_plat("windows") then
+        add_cflags("/TC")
         add_syslinks("ws2_32", "iphlpapi", {public = true})
     elseif is_plat("linux") then
         add_syslinks("pthread", "m", "rt", {public = true})
