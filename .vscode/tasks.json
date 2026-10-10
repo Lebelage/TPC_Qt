@@ -1,0 +1,86 @@
+{
+    "version": "2.0.0",
+    "type": "process",
+    "command": "xmake",
+    "options": {
+        "cwd": "${workspaceFolder}"
+    },
+    "tasks": [
+        {
+            "label": "xmake: configure Debug",
+            "args": [
+                "f",
+                "-m",
+                "debug",
+                "-o",
+                "build",
+                "--app=y",
+                "-y"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "xmake: configure Release",
+            "args": [
+                "f",
+                "-m",
+                "release",
+                "-o",
+                "build",
+                "--app=y",
+                "-y"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "xmake: build",
+            "args": [
+                "-y",
+                "TPC_Slint"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "windows": {
+                "problemMatcher": [
+                    "$msCompile"
+                ]
+            }
+        },
+        {
+            "label": "xmake: install Debug",
+            "args": [
+                "install",
+                "-o",
+                "out/debug",
+                "TPC_Slint"
+            ],
+            "dependsOn": [
+                "xmake: configure Debug",
+                "xmake: build"
+            ],
+            "dependsOrder": "sequence",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "xmake: install Release",
+            "args": [
+                "install",
+                "-o",
+                "out/release",
+                "TPC_Slint"
+            ],
+            "dependsOn": [
+                "xmake: configure Release",
+                "xmake: build"
+            ],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

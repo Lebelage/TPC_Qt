@@ -3,11 +3,11 @@ set_project("TPC_Slint")
 set_version("0.1.0")
 set_languages("c++23")
 set_allowedplats("macosx", "windows", "linux")
-set_config("builddir", "out")
+set_config("builddir", "build")
 set_targetdir("$(builddir)/$(plat)/$(arch)/$(mode)")
 set_policy("package.requires_lock", true)
 add_rules("mode.debug", "mode.release")
-add_rules("plugin.compile_commands.autoupdate", {outputdir = "out"})
+add_rules("plugin.compile_commands.autoupdate", {outputdir = "."})
 
 option("app", {default = true, showmenu = true, description = "Build the Slint desktop application"})
 
