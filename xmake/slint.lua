@@ -1,50 +1,53 @@
--- Installed Slint C++ SDK: xmake owns discovery/linkage; this rule owns UI generation.
+-- Fetch and build the C++ SDK and UI compiler from the same Slint release.
 package("slint")
     set_homepage("https://slint.dev")
-    set_description("Installed Slint C++ SDK")
-    on_fetch(function (package, opt)
-        if not opt.system then return false end
+    set_description("Slint C++ SDK built from source with Rust")
+    add_urls("https://github.com/slint-ui/slint/archive/refs/tags/v$(version).tar.gz")
+    add_versions("1.18.1", "fe485305ed303215e76c04918ee9aefbffbe229f18f979098ec36c7fa1dab28b")
+    add_deps("cmake", "ninja")
+    add_configs("shared", {description = "Build the shared Slint runtime", default = true, type = "boolean", readonly = true})
+
+    on_install(function (package)
         import("lib.detect.find_tool")
-        import("core.base.semver")
-        local compiler = find_tool("slint-compiler", {force = true})
-        local program = compiler and compiler.program
-        assert(program and os.isfile(program),
-            "slint-compiler is required in PATH (Homebrew slint-cpp provides only the library; install the compiler separately)")
-        while os.islink(program) do
-            program = path.absolute(os.readlink(program), path.directory(program))
-        end
-        local root = path.directory(path.directory(program))
-        -- Homebrew ships the C++ library without the compiler; discover it separately.
-        if package:is_plat("macosx") and not os.isfile(path.join(root, "include", "slint", "slint.h")) then
-            local brew = find_tool("brew")
-            assert(brew, "Slint headers not found beside slint-compiler; install the C++ SDK")
-            root = os.iorunv(brew.program, {"--prefix", "slint-cpp"}):trim()
-        end
-        local include = path.join(root, "include", "slint")
+        assert(find_tool("cargo") and find_tool("rustc"),
+            "Building Slint requires Rust 1.92+ (cargo and rustc in PATH); install it with rustup")
+        import("package.tools.cmake").install(package, {
+            "-DBUILD_SHARED_LIBS=ON",
+            "-DBUILD_TESTING=OFF",
+            "-DSLINT_BUILD_TESTING=OFF",
+            "-DSLINT_BUILD_EXAMPLES=OFF",
+            "-DSLINT_BUILD_RUNTIME=ON",
+            "-DSLINT_FEATURE_COMPILER=ON",
+            "-DSLINT_COMPILER=",
+            "-DSLINT_LIBRARY_CARGO_FLAGS=--locked",
+            "-DSLINT_FEATURE_BACKEND_QT=OFF",
+            "-DSLINT_FEATURE_RENDERER_SKIA=OFF"
+        }, {cmake_generator = "Ninja"})
+    end)
+
+    on_fetch(function (package, opt)
+        if opt.system then return end
+        local root = package:installdir()
         local lib = path.join(root, "lib")
-        local runtime = package:is_plat("windows") and path.join(root, "bin", "slint_cpp.dll")
+        local program = path.join(root, "bin", package:is_plat("windows") and "slint-compiler.exe" or "slint-compiler")
+        local runtime = package:is_plat("windows") and path.join(lib, "slint_cpp.dll")
             or path.join(lib, package:is_plat("macosx") and "libslint_cpp.dylib" or "libslint_cpp.so")
         if package:is_plat("windows") and not os.isfile(runtime) then
-            runtime = path.join(lib, "slint_cpp.dll")
+            runtime = path.join(root, "bin", "slint_cpp.dll")
         end
-        assert(os.isfile(path.join(include, "slint.h")), "Incomplete Slint SDK: missing %s/slint.h", include)
-        assert(os.isfile(runtime), "Slint SDK runtime is missing: %s", runtime)
-        if package:is_plat("windows") then
-            assert(os.isfile(path.join(lib, "slint_cpp.lib")), "Slint SDK must include lib/slint_cpp.lib for MSVC")
-        end
-        local version = os.iorunv(program, {"--version"}):match("(%d+%.%d+%.%d+)")
-        assert(version and semver.satisfies(version, ">=1.18.0"), "Slint C++ SDK 1.18 or newer is required")
-        local config = path.join(lib, "cmake", "Slint", "SlintConfigVersion.cmake")
-        if os.isfile(config) then
-            local sdk_version = io.readfile(config):match('set%(PACKAGE_VERSION "([%d%.]+)"%)')
-            assert(not sdk_version or sdk_version == version,
-                "Slint version mismatch: compiler %s, C++ SDK %s; install matching versions", version, sdk_version)
-        end
-        return {version = version, includedirs = {include}, linkdirs = {lib}, links = {"slint_cpp"},
-            rpathdirs = not package:is_plat("windows") and {lib, "@loader_path"} or nil,
+        if not os.isfile(program) or not os.isfile(runtime) then return end
+        return {version = package:version_str(), includedirs = {path.join(root, "include", "slint")},
+            linkdirs = {lib}, links = {package:is_plat("windows") and "slint_cpp.dll" or "slint_cpp"},
+            rpathdirs = not package:is_plat("windows") and {lib, package:is_plat("macosx") and "@loader_path" or "$ORIGIN"} or nil,
             slint_compiler = program, slint_runtime = runtime,
             slint_dlls = package:is_plat("windows") and table.join(
                 os.files(path.join(root, "bin", "*.dll")), os.files(path.join(lib, "*.dll"))) or {}}
+    end)
+
+    on_test(function (package)
+        os.vrunv(package:installdir("bin", package:is_plat("windows") and "slint-compiler.exe" or "slint-compiler"), {"--version"})
+        assert(package:check_cxxsnippets({sdk = '#include <slint.h>\nvoid test() { slint::SharedString text("Slint"); }'},
+            {configs = {languages = "c++20"}}))
     end)
 package_end()
 
@@ -88,9 +91,10 @@ rule("slint.deploy")
             local bundle = path.join(target:targetdir(), target:basename() .. ".app", "Contents")
             local executable = path.join(bundle, "MacOS", target:basename())
             local frameworks = path.join(bundle, "Frameworks")
+            os.rm(path.directory(bundle))
             os.mkdir(path.directory(executable), frameworks)
             os.cp(target:targetfile(), executable)
-            -- Relocate SDK/Homebrew dylibs recursively; never modify the installed SDK.
+            -- Relocate runtime dylibs recursively without modifying the cached SDK.
             local copied = {}
             local function relocate(source, destination)
                 local dependencies = os.iorunv("otool", {"-L", source})

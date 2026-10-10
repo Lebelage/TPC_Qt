@@ -72,15 +72,14 @@ is empty, malformed, or cannot be deserialized, it is replaced with defaults.
 
 ## Build and packaging
 
-Slint markup is compiled ahead of time by the installed SDK's `slint-compiler`.
-The system package `slint` supplies SDK paths and linkage. The `slint.cpp` rule
-regenerates C++ code when UI files or assets change and embeds
-resources in the application. Slint C++ SDK 1.18 or newer must already be
-installed and its `bin` directory must be in `PATH`. Discovery uses
-`slint-compiler` to locate headers and libraries in the same SDK. On macOS,
-the library can also come from `brew --prefix slint-cpp`; Homebrew omits the
-compiler, so it must be installed separately with the same version.
-Eigen, JSON and stdexec are downloaded by xrepo with pinned versions.
+Slint 1.18.1 is fetched and built as a local xmake package. Its official
+CMake/Corrosion build uses Cargo to build the C++ runtime and UI compiler from
+one source release. Rust 1.92+ is required; CMake and Ninja are supplied by xrepo.
+The package provides SDK paths and linkage to the desktop target only.
+The `slint.cpp` rule generates C++ sources and embeds UI resources, while
+`slint.deploy` packages the shared runtime alongside the application.
+No externally installed Slint SDK or compiler is used.
+
 Use `xmake f --app=n` to build libraries and tests without the Slint SDK.
 
 Installable artifacts are produced with:

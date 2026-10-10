@@ -6,7 +6,7 @@
 
 ```text
 xmake.lua                 единая конфигурация приложения, библиотек и тестов
-xmake/slint.lua           подключение установленного SDK, генерация UI и runtime
+xmake/slint.lua           сборка Slint из исходников, генерация UI и runtime
 lib/tpc/                  собственная библиотека TPC API
 third_party/              исходники open62541 и open62541pp с лицензиями
 third_party/xmake.lua     прямая сборка сторонних библиотек через xmake
@@ -28,7 +28,7 @@ docs/                     документация
 | nlohmann_json 3.12.0 | xrepo |
 | open62541 1.4.20 | исходники в `third_party`, статическая библиотека xmake |
 | open62541pp 0.21.3 | исходники в `third_party`, статическая библиотека xmake |
-| Slint C++ SDK 1.18+ | установленный SDK |
+| Slint C++ SDK 1.18.1 | локальный пакет xmake, сборка из исходников |
 
 Зависимости xrepo скачиваются автоматически; версии закреплены в конфигурации
 и `xmake-requires.lock`. OPC UA библиотеки входят в репозиторий, не скачиваются
@@ -39,54 +39,31 @@ docs/                     документация
 
 - xmake 3.0+;
 - компилятор C++23: Apple Clang на macOS или MSVC из Visual Studio 2022 на Windows;
-- готовый Slint C++ SDK для нужной платформы и архитектуры;
-- сеть при первой установке пакетов xrepo.
-
-Slint не скачивается проектом. SDK должен содержать компилятор UI, заголовки
-и runtime одной версии. Rust для сборки приложения не нужен.
+- Rust 1.92+ через [rustup](https://rustup.rs/), `cargo` и `rustc` в `PATH`;
+- сеть при первой установке зависимостей и Rust crates.
 
 ## Сборка
 
-Slint устанавливается разработчиком. Сборка находит `slint-compiler` в `PATH`
-и подключает заголовки и библиотеки из того же SDK. На macOS библиотека также
-находится через `brew --prefix slint-cpp`.
-
-Homebrew устанавливает только C++ библиотеку, без компилятора UI:
-
-```sh
-brew install slint-cpp
-```
-
-Отдельно установите `slint-compiler` той же версии из
-[релизов Slint](https://github.com/slint-ui/slint/releases) и добавьте каталог
-с бинарником в `PATH`. Если установлен Rust, для Slint 1.18.1 можно использовать:
+Slint 1.18.1 скачивается и собирается автоматически как локальный пакет xmake.
+Официальная сборка Slint через CMake/Corrosion вызывает Cargo и создаёт C++
+библиотеку, заголовки и `slint-compiler` одной версии. CMake и Ninja устанавливает
+xrepo; сборка проекта и управление всеми зависимостями остаются в xmake.
+Устанавливать Slint через brew, установщик или отдельный `cargo install` не нужно.
 
 ```sh
-cargo install --git https://github.com/slint-ui/slint --tag v1.18.1 --locked slint-compiler
-export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-Для полного SDK в другом каталоге добавьте его `bin`:
-
-```sh
-export PATH="/путь/к/slint-sdk/bin:$PATH"
+rustc --version
+cargo --version
 xmake f -m debug
 xmake
 xmake run TPC_Slint
 ```
 
-В Windows установите C++ SDK через установщик Slint, добавьте его каталог `bin`
-в переменную среды `PATH` и используйте Developer PowerShell Visual Studio:
+На Windows используйте Developer PowerShell Visual Studio и Rust toolchain
+`stable-x86_64-pc-windows-msvc`. Для Clang можно добавить `--toolchain=clang-cl`
+к команде конфигурации xmake.
 
-```powershell
-$env:PATH = "C:\SDK\Slint\bin;$env:PATH"
-xmake f -m debug
-xmake
-xmake run TPC_Slint
-```
-
-Специальных параметров xmake для Slint нет. Если SDK не найден или неполон,
-конфигурация завершается с сообщением об ошибке.
+Первая конфигурация занимает больше времени: собираются Slint и Rust-зависимости.
+Готовый SDK хранится в кеше пакетов xmake и используется повторно.
 
 ## Release и установка
 
@@ -108,9 +85,9 @@ xmake tpc
 xmake test
 ```
 
-В этом режиме Slint SDK не требуется. `xmake test` собирает и запускает
+В этом режиме Slint и Rust не требуются. `xmake test` собирает и запускает
 научные проверки, тесты логирования и тест кадра API. Для возврата к приложению
-используйте `xmake f -m debug --app=y` с установленным SDK.
+используйте `xmake f -m debug --app=y`.
 
 ## IDE и локальные файлы
 

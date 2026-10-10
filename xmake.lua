@@ -42,7 +42,7 @@ target_end()
 
 if has_config("app") then
     includes("xmake/slint.lua")
-    add_requires("slint >=1.18.0", {system = true})
+    add_requires("slint 1.18.1", {system = false})
     target("TPC_Slint")
         set_kind("binary")
         add_deps("tpc_app")
