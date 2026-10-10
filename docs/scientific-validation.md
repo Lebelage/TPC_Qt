@@ -115,9 +115,8 @@ E1…E6/W1…W6 заменяется измерениями из `sensors_coords
 ## Автоматические проверки
 
 ```sh
-cmake -S . -B .build/release -DTPC_SLINT_BUILD_SCIENTIFIC_TESTS=ON
-cmake --build .build/release -j 4
-ctest --test-dir .build/release --output-on-failure
+xmake f -m release --app=n
+xmake test
 ```
 
 Проверяются масштабирование, все гармонические моды, div/curl поправки,

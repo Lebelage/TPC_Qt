@@ -1,15 +1,12 @@
-# CMake and vcpkg output
-/.build/
+# xmake build output and local configuration
 /build/
-/cmake-build-*/
+/.xmake/
 /out/
-/vcpkg_installed/
 /compile_commands.json
-/CMakeUserPresets.json
+/.vscode/compile_commands.json
 
 # IDE-local state
 /.idea/
-/.qtcreator/
 *.user
 
 # OS/editor artifacts
@@ -18,8 +15,3 @@ Thumbs.db
 Desktop.ini
 *~
 *.swp
-
-# Meson artifacts left by an optional subproject checkout
-/subprojects/.wraplock
-/subprojects/tpc_api/.meson-subproject-wrap-hash.txt
-/subprojects/tpc_api_backup*/

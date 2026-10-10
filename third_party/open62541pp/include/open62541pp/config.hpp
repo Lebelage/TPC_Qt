@@ -1,0 +1,82 @@
+#pragma once
+
+// expose open62541 compile options defined in open62541/config.h
+#include "open62541pp/detail/open62541/config.h"
+
+/* ------------------------------------------- Version ------------------------------------------ */
+#define UAPP_VERSION "0.21.3"
+#define UAPP_VERSION_MAJOR 0
+#define UAPP_VERSION_MINOR 21
+#define UAPP_VERSION_PATCH 3
+
+/* --------------------------------------- Version checks --------------------------------------- */
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#define UAPP_OPEN62541_VER_EQ(MAJOR, MINOR)                                                        \
+    (UA_OPEN62541_VER_MAJOR == (MAJOR)) && (UA_OPEN62541_VER_MINOR == (MINOR))
+#define UAPP_OPEN62541_VER_GE(MAJOR, MINOR)                                                        \
+    (UA_OPEN62541_VER_MAJOR >= (MAJOR)) && (UA_OPEN62541_VER_MINOR >= (MINOR))
+#define UAPP_OPEN62541_VER_LE(MAJOR, MINOR)                                                        \
+    (UA_OPEN62541_VER_MAJOR <= (MAJOR)) && (UA_OPEN62541_VER_MINOR <= (MINOR))
+// NOLINTEND(cppcoreguidelines-macro-usage)
+
+/* --------------------------------------- Feature checks --------------------------------------- */
+#ifndef UA_ENABLE_NODEMANAGEMENT
+#error "open62541 must be compiled with UA_ENABLE_NODEMANAGEMENT"
+#endif
+
+#if defined(UA_ENABLE_TYPEDESCRIPTION) || defined(UA_ENABLE_TYPENAMES)
+#define UAPP_HAS_TYPEDESCRIPTION 1
+#else
+#define UAPP_HAS_TYPEDESCRIPTION 0
+#endif
+
+#ifdef UA_ENABLE_PARSING
+#define UAPP_HAS_PARSING UAPP_OPEN62541_VER_GE(1, 1)
+#else
+#define UAPP_HAS_PARSING 0
+#endif
+
+#if UAPP_OPEN62541_VER_GE(1, 4)
+#ifdef UA_ENABLE_JSON_ENCODING
+#define UAPP_HAS_TOSTRING 1
+#else
+#define UAPP_HAS_TOSTRING 0
+#endif
+#else
+#ifdef UA_ENABLE_TYPEDESCRIPTION
+#define UAPP_HAS_TOSTRING UAPP_OPEN62541_VER_GE(1, 2)
+#else
+#define UAPP_HAS_TOSTRING 0
+#endif
+#endif
+
+#define UAPP_HAS_ORDER UAPP_OPEN62541_VER_GE(1, 3)
+
+#ifdef UA_ENABLE_DA
+// types like UA_EUInformation added since v1.1
+#define UAPP_HAS_DATAACCESS UAPP_OPEN62541_VER_GE(1, 1)
+#else
+#define UAPP_HAS_DATAACCESS 0
+#endif
+
+#define UAPP_HAS_ASYNC_OPERATIONS UAPP_OPEN62541_VER_GE(1, 1) && UA_MULTITHREADING >= 100
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS
+#define UAPP_HAS_ASYNC_SUBSCRIPTIONS UAPP_OPEN62541_VER_GE(1, 1)
+#else
+#define UAPP_HAS_ASYNC_SUBSCRIPTIONS 0
+#endif
+
+#if defined(UA_ENABLE_ENCRYPTION_OPENSSL) || defined(UA_ENABLE_ENCRYPTION_LIBRESSL)
+#define UAPP_HAS_CREATE_CERTIFICATE UAPP_OPEN62541_VER_GE(1, 3)
+#else
+#define UAPP_HAS_CREATE_CERTIFICATE 0
+#endif
+
+// UA_ENABLE_NODESETLOADER is not defined in open62541/config.h
+// https://github.com/open62541/open62541/pull/7218
+#ifdef UA_ENABLE_NODESETLOADER
+#define UAPP_HAS_NODESETLOADER 1
+#else
+#define UAPP_HAS_NODESETLOADER 0
+#endif

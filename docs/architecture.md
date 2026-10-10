@@ -57,9 +57,9 @@ areas do not include TPC system or analytics implementation headers. The
 adapter consumes `<tpc/tpc.hpp>` and translates backend events into
 application-owned event types.
 
-Development builds use the bundled checkout selected by `TPC_API_DIR`. Release
-and CI builds may use `find_package(TPC CONFIG)` by setting
-`TPC_SLINT_USE_INSTALLED_TPC=ON`. Both modes link the public `TPC::TPC` target.
+The API lives in `lib/tpc` and is built as the `tpc` static library.
+The application services form `tpc_app`, shared by the desktop target and tests.
+OPC UA sources live in `third_party` and are compiled directly by xmake.
 
 ## Settings
 
@@ -72,12 +72,21 @@ is empty, malformed, or cannot be deserialized, it is replaced with defaults.
 
 ## Build and packaging
 
-Slint markup is compiled ahead of time by `slint_target_sources`. CMake first
-uses an installed Slint 1.18 package and otherwise fetches the pinned 1.18.1
-source release. The fallback needs Rust 1.92 or newer.
+Slint markup is compiled ahead of time by the installed SDK's `slint-compiler`.
+The system package `slint` supplies SDK paths and linkage. The `slint.cpp` rule
+regenerates C++ code when UI files or assets change and embeds
+resources in the application. Slint C++ SDK 1.18 or newer must already be
+installed and its `bin` directory must be in `PATH`. Discovery uses
+`slint-compiler` to locate headers and libraries in the same SDK. On macOS,
+the library can also come from `brew --prefix slint-cpp`; Homebrew omits the
+compiler, so it must be installed separately with the same version.
+Eigen, JSON and stdexec are downloaded by xrepo with pinned versions.
+Use `xmake f --app=n` to build libraries and tests without the Slint SDK.
 
 Installable artifacts are produced with:
 
-```text
-cmake --install <build-directory> --prefix <staging-directory>
+```sh
+xmake f -m release
+xmake
+xmake install -o out/release TPC_Slint
 ```

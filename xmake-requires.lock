@@ -1,0 +1,50 @@
+{
+    __meta__ = {
+        version = "1.0"
+    },
+    ["macosx|arm64"] = {
+        ["cmake#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "e0700eda6732f5ac0395fb08159b0d8390cf8392",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "4.3.4"
+        },
+        ["eigen 5.0.1#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "e0700eda6732f5ac0395fb08159b0d8390cf8392",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "5.0.1"
+        },
+        ["ninja#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "e0700eda6732f5ac0395fb08159b0d8390cf8392",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "v1.13.2"
+        },
+        ["nlohmann_json v3.12.0#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "e0700eda6732f5ac0395fb08159b0d8390cf8392",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "v3.12.0"
+        },
+        ["slint >=1.18.0#fd44226e"] = {
+            version = ">=1.18.0"
+        },
+        ["stdexec 2026.07.06#f56260b5"] = {
+            repo = {
+                branch = "master",
+                commit = "e0700eda6732f5ac0395fb08159b0d8390cf8392",
+                url = "https://github.com/xmake-io/xmake-repo.git"
+            },
+            version = "2026.07.06"
+        }
+    }
+}
