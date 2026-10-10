@@ -3,10 +3,11 @@ set_project("TPC_Slint")
 set_version("0.1.0")
 set_languages("c++23")
 set_allowedplats("macosx", "windows", "linux")
+set_config("builddir", "out")
 set_targetdir("$(builddir)/$(plat)/$(arch)/$(mode)")
 set_policy("package.requires_lock", true)
 add_rules("mode.debug", "mode.release")
-add_rules("plugin.compile_commands.autoupdate", {outputdir = "."})
+add_rules("plugin.compile_commands.autoupdate", {outputdir = "out"})
 
 option("app", {default = true, showmenu = true, description = "Build the Slint desktop application"})
 
@@ -48,8 +49,7 @@ if has_config("app") then
         add_deps("tpc_app")
         add_packages("slint")
         add_files("src/main.cpp", "src/ui/application_view_binding.cpp", "src/viewmodels/*.cpp")
-        add_rules("slint.cpp", {ui = "ui/app.slint", style = "fluent"})
-        add_rules("slint.deploy", {bundle_identifier = "org.tpc.controller"})
+        add_rules("slint", {ui = "ui/app.slint", style = "fluent", bundle_identifier = "org.tpc.controller"})
         if is_plat("macosx") then
             add_files("src/ui/file_dialog_macos.mm")
             add_frameworks("AppKit", "UniformTypeIdentifiers")

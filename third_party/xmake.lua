@@ -19,7 +19,6 @@ target_end()
 
 target("open62541pp")
     set_kind("static")
-    set_languages("c++23")
     add_files("open62541pp/src/**.cpp")
     add_includedirs("open62541pp/include", {public = true})
     add_deps("open62541", {public = true})
