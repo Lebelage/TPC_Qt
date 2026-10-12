@@ -19,7 +19,8 @@ end
 if is_mode("release") then
     set_optimize("smallest")
     set_strip("all")
-    set_policy("build.optimization.lto", true)
+    -- Homebrew Clang may emit newer bitcode than Apple's linker can read.
+    set_policy("build.optimization.lto", not is_plat("macosx"))
 end
 
 includes("third_party")
