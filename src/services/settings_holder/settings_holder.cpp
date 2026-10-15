@@ -27,14 +27,14 @@ struct SensorPosition {
     std::string_view name;
     float x, y, z;
 };
-// sensors_coords.txt: Cartesian millimetres; W is +Z, E is -Z.
+// sensors_coords (2).txt: Cartesian millimetres; W is +Z, E is -Z.
 constexpr std::array kSensorPositions{
     SensorPosition{"W1",     0.000f,  1408.569f,  2029.000f},
-    SensorPosition{"W2", -1219.856f,   704.285f,  2029.000f},
-    SensorPosition{"W3", -1219.856f,  -704.285f,  2029.000f},
+    SensorPosition{"W2",  1219.856f,   704.285f,  2029.000f},
+    SensorPosition{"W3",  1219.856f,  -704.285f,  2029.000f},
     SensorPosition{"W4",     0.000f, -1408.569f,  2029.000f},
-    SensorPosition{"W5",  1219.856f,  -704.285f,  2029.000f},
-    SensorPosition{"W6",  1219.856f,   704.285f,  2029.000f},
+    SensorPosition{"W5", -1219.856f,  -704.285f,  2029.000f},
+    SensorPosition{"W6", -1219.856f,   704.285f,  2029.000f},
     SensorPosition{"E1",     0.000f,  1408.569f, -2029.000f},
     SensorPosition{"E2", -1219.856f,   704.285f, -2029.000f},
     SensorPosition{"E3", -1219.856f,  -704.285f, -2029.000f},

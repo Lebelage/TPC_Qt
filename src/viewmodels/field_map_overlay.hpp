@@ -28,7 +28,6 @@ struct FieldTick {
 struct FieldSensorMarker {
     double u{};
     double v{};
-    std::string label;
     bool in_slice{};
 };
 
@@ -52,8 +51,8 @@ struct FieldGrid {
 // The same ticks drive the plot grid and axes, including the space beyond the TPC.
 [[nodiscard]] FieldGrid fieldGrid(const services::RenderedFieldSlice& slice, const FieldViewport& view);
 
-// All configured Hall sensors are projected onto the displayed plane. A star
-// identifies a sensor actually in that slice; coincident projections share a label.
+// All configured Hall sensors are projected onto the displayed plane as points.
+// Coincident projections share a point, highlighted if any sensor is in the slice.
 [[nodiscard]] std::vector<FieldSensorMarker> fieldSensorMarkers(
     const services::RenderedFieldSlice& slice, std::span<const models::Sensor> sensors
 );

@@ -287,7 +287,6 @@ void ApplicationViewBinding::renderSensors() {
             MapSensor row;
             row.u = static_cast<float>(marker.u);
             row.v = static_cast<float>(marker.v);
-            row.label = toSharedString(marker.label);
             row.in_slice = marker.in_slice;
             markers.push_back(std::move(row));
         }

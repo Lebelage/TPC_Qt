@@ -230,7 +230,7 @@ void millimetreSettings() {
         && current.geometry.radius == 1408.569 && current.sensors_info.size() == 12,
         "Default volume and sensor positions use millimetres");
     const auto w2 = std::ranges::find(current.sensors_info, std::string{"W2"}, &m::SensorInfo::previewable_name);
-    require(w2 != current.sensors_info.end() && std::abs(w2->x + 1219.856) < .001
+    require(w2 != current.sensors_info.end() && std::abs(w2->x - 1219.856) < .001
         && std::abs(w2->y - 704.285) < .001 && w2->z == 2029,
         "Measured W2 coordinates and positive W side retained");
     const auto e1 = std::ranges::find(current.sensors_info, std::string{"E1"}, &m::SensorInfo::previewable_name);
@@ -345,8 +345,8 @@ void fieldOverlays() {
         {*m::SensorName::parse("W3"), {21, 0, 100}}
     };
     auto markers = tpc_slint::viewmodels::fieldSensorMarkers(slice, sensors);
-    require(markers.size() == 2 && markers[0].label == "W1* / E1" && markers[0].in_slice,
-        "Coincident Hall projections retain names and distinguish sensors in the slice");
+    require(markers.size() == 2 && markers[0].in_slice,
+        "Coincident Hall projections share a point highlighted when a sensor is in the slice");
     auto sample = slice.probe(markers[0].u * 300, markers[0].v * 300, 300, 300);
     require(sample && sample->position_mm == sensors[0].position,
         "Hall marker maps to the same grid sample as the field probe, including image edges");
@@ -457,11 +457,11 @@ void horizontalLongitudinalSlices() {
         std::vector<m::Sensor> sensors{{*m::SensorName::parse("W1"), axis == 0
             ? std::array<double,3>{3,2,-6} : std::array<double,3>{2,3,-6}}};
         const auto markers = tpc_slint::viewmodels::fieldSensorMarkers(*horizontal, sensors);
-        require(markers.size() == 1 && markers[0].label == "W1*" && markers[0].u < .2 && markers[0].v > .8,
+        require(markers.size() == 1 && markers[0].in_slice && markers[0].u < .2 && markers[0].v > .8,
             "Longitudinal sensor markers place negative Z left and positive transverse coordinates down");
         const auto sensor_probe = horizontal->probe(markers[0].u*500, markers[0].v*300, 500, 300);
         require(sensor_probe && sensor_probe->position_mm == sensors[0].position,
-            "Projected sensor names and hover remain aligned after rotation");
+            "Projected sensor points and hover remain aligned after rotation");
         const auto grid = tpc_slint::viewmodels::fieldGrid(*horizontal, {750,300,0,0,750,300});
         const auto negative = std::ranges::find_if(grid.vertical,[](const auto& tick) {
             return tick.major && tick.label.starts_with("-");

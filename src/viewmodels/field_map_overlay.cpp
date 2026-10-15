@@ -135,16 +135,13 @@ std::vector<FieldSensorMarker> fieldSensorMarkers(
         const double vertical_position = imageCoordinate(v, slice.verticalRange(), slice.displayHeight());
         const double y = slice.verticalInverted() ? 1 - vertical_position : vertical_position;
         const bool in_slice = std::abs(sensor.position[slice.axis] - slice.coordinate) <= slice_tolerance_mm;
-        const auto label = sensor.name.toString() + (in_slice ? "*" : "");
         auto same = std::ranges::find_if(markers, [x, y](const auto& marker) {
             return std::abs(marker.u - x) < projection_tolerance && std::abs(marker.v - y) < projection_tolerance;
         });
         if (same == markers.end())
-            markers.push_back({x, y, label, in_slice});
-        else {
-            same->label += " / " + label;
+            markers.push_back({x, y, in_slice});
+        else
             same->in_slice |= in_slice;
-        }
     }
     return markers;
 }

@@ -1,7 +1,7 @@
 import { Theme, PlotTheme } from "theme.slint";
 
 export struct MapTick { position: float, label: string, zero: bool, major: bool }
-export struct MapSensor { u: float, v: float, label: string, in-slice: bool }
+export struct MapSensor { u: float, v: float, in-slice: bool }
 
 component GridLine inherits Path {
     in property <bool> vertical;
@@ -164,20 +164,6 @@ export component FieldMap inherits Rectangle {
                     commands: "M 5 1 A 4 4 0 1 1 5 9 A 4 4 0 1 1 5 1 Z";
                     fill: sensor.in-slice ? PlotTheme.sensor-fill : PlotTheme.background;
                     stroke: PlotTheme.text; stroke-width: 2px; anti-alias: true;
-                }
-                Rectangle {
-                    x: clamp(parent.x > canvas.width * 0.65 ? -self.width - 5px : 15px,
-                        -parent.x + 4px, canvas.width - parent.x - self.width - 4px);
-                    // Keep neighbouring ring labels on the same side of their points.
-                    y: clamp(parent.y < canvas.height / 2 ? 15px : -self.height - 5px,
-                        -parent.y + 4px, canvas.height - parent.y - self.height - 4px);
-                    width: min(label.preferred-width + 12px, canvas.width - 12px); height: 26px;
-                    background: PlotTheme.sensor-label; border-color: PlotTheme.sensor-border; border-width: 1px; border-radius: 3px;
-                    label := Text {
-                        x: 6px; width: parent.width - 12px; height: parent.height;
-                        text: sensor.label; color: sensor.in-slice ? PlotTheme.sensor-in-slice : PlotTheme.text;
-                        font-size: Theme.font-label; font-weight: Theme.weight-medium; overflow: elide; vertical-alignment: center;
-                    }
                 }
             }
         }
