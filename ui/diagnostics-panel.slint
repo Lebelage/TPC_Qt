@@ -1,0 +1,28 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { BodyText, CaptionText, Panel } from "components.slint";
+
+export component DiagnosticsPanel inherits Panel {
+    in property <string> message;
+    in property <int> level;
+    in property <string> data-quality;
+    in property <string> field-quality;
+    in property <bool> homogeneous;
+    height: 80px;
+    ScrollView {
+        x: 10px; y: 8px; width: root.width - 20px; height: root.height - 16px;
+        content-width: self.visible-width;
+        horizontal-scrollbar-policy: always-off;
+        VerticalLayout {
+            spacing: 4px;
+            BodyText {
+                text: root.message;
+                color: root.level == 2 ? Theme.danger : root.level == 1 ? Theme.success : Theme.text;
+                font-size: Theme.font-label; font-weight: Theme.weight-medium;
+                wrap: word-wrap;
+            }
+            CaptionText { text: root.data-quality; wrap: word-wrap; }
+            CaptionText { text: root.field-quality; color: root.homogeneous ? Theme.success : Theme.warning; wrap: word-wrap; }
+        }
+    }
+}

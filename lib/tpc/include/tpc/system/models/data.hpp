@@ -37,6 +37,10 @@ struct ReceivedItem {
 struct HallCalibration {
     double k;      // Гс/мВ
     double v0_mv;  // мВ
+    [[nodiscard]] double apply(double voltage_mv) const noexcept {
+        return k * (voltage_mv - v0_mv);
+    }
+    bool operator==(const HallCalibration&) const = default;
 };
 
 struct NamedHallCalibration {
@@ -107,6 +111,12 @@ struct HallCalibrationCollection {
         }
 
         return nullptr;
+    }
+
+    [[nodiscard]] static const HallCalibration* resolve(
+        const std::string& name, const std::unordered_map<std::string, HallCalibration>& overrides) noexcept {
+        const auto custom = overrides.find(name);
+        return custom != overrides.end() ? &custom->second : find(name);
     }
 };
 

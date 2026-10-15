@@ -218,7 +218,8 @@ public:
         std::array<std::size_t, 2> grid,
         double radius,
         double z_length,
-        std::stop_token stop_token = {}
+        std::stop_token stop_token = {},
+        models::SliceFraming framing = models::SliceFraming::Tight
     ) const {
         if (grid[0] < 2 || grid[1] < 2 || grid[0] > 1024 || grid[1] > 1024)
             return std::unexpected("Slice grid dimensions must be at least 2");
@@ -247,7 +248,8 @@ public:
             slice.horizontal_bounds = {-radius, radius};
             slice.vertical_bounds = {-radius, radius};
         } else {
-            const double transverse_limit = std::sqrt(std::max(0.0, radius * radius - coordinate * coordinate));
+            const double transverse_limit = framing == models::SliceFraming::FullVolume ? radius
+                : std::sqrt(std::max(0.0, radius * radius - coordinate * coordinate));
             slice.horizontal_bounds = {-transverse_limit, transverse_limit};
             slice.vertical_bounds = {-half_length, half_length};
         }

@@ -10,8 +10,7 @@
 namespace tpc_slint::services {
 namespace fs = std::filesystem;
 
-FileWorker::FileWorker(fs::path settings_path)
-    : settings_path_(std::move(settings_path)) {
+FileWorker::FileWorker(fs::path settings_path) : settings_path_(std::move(settings_path)) {
     initialize();
 }
 
@@ -34,8 +33,20 @@ std::expected<void, std::string> FileWorker::writeSettings(const std::string& se
 
 std::expected<std::string, std::string> FileWorker::loadSettings() const {
     std::scoped_lock lock{mutex_};
-    const fs::path& path = settings_path_;
+    return readSettings(settings_path_);
+}
 
+void FileWorker::setSettingsPath(fs::path path) {
+    std::scoped_lock lock{mutex_};
+    settings_path_ = std::move(path);
+}
+
+fs::path FileWorker::settingsPath() const {
+    std::scoped_lock lock{mutex_};
+    return settings_path_;
+}
+
+std::expected<std::string, std::string> FileWorker::readSettings(const fs::path& path) {
     std::ifstream file{path};
     if (!file) {
         return std::unexpected{std::format("Failed to open {} for reading", path.string())};

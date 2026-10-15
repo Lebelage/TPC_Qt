@@ -1,16 +1,16 @@
 #pragma once
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <string_view>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "models/field_slice_model.hpp"
-#include "models/tpc_data_model.hpp"
 #include "models/measurement_quality.hpp"
+#include "models/tpc_data_model.hpp"
 #include "services/scoped_subscription.hpp"
 #include "tpc/utilities/event_handler.hpp"
 
@@ -36,6 +36,9 @@ struct SensorRowViewState {
     std::string coordinate_x;
     std::string coordinate_y;
     std::string coordinate_z;
+    bool enabled{};
+    bool selectable{};
+    std::string status;
 
     bool operator==(const SensorRowViewState&) const = default;
 };
@@ -43,10 +46,13 @@ struct SensorRowViewState {
 struct MainWindowViewState {
     // Immutable snapshots keep status/settings notifications independent of table size.
     std::shared_ptr<const std::vector<SensorRowViewState>> sensor_rows{
-        std::make_shared<const std::vector<SensorRowViewState>>()};
+        std::make_shared<const std::vector<SensorRowViewState>>()
+    };
     bool connected{};
     bool field_calculated{};
     bool calculating{};
+    std::size_t enabled_sensor_count{};
+    std::string settings_path;
     models::ScientificStatus scientific_status;
     std::string tpc_length{"4058"};
     std::string tpc_radius{"1408.569"};
@@ -60,6 +66,7 @@ struct MainWindowViewState {
 };
 
 struct FieldWindowViewState {
+    std::shared_ptr<const std::vector<models::Sensor>> sensors{std::make_shared<const std::vector<models::Sensor>>()};
     bool available{};
     bool loading{};
     int axis_index{2};
@@ -67,8 +74,6 @@ struct FieldWindowViewState {
     std::string position_input{"0"};
     float minimum_position{};
     float maximum_position{};
-    float minimum_value{};
-    float maximum_value{};
     std::string position_label{"—"};
     std::shared_ptr<const services::RenderedFieldSlice> rendered_slice;
 };
@@ -105,14 +110,21 @@ public:
     void disconnect();
     void calculateField();
     void reloadSettings();
+    void loadSettings(std::string_view path);
+    void setSensorEnabled(std::string_view name, bool enabled);
     void applySettings(SettingsInput input);
     void exportField(std::string_view path);
     void selectAxis(int axis);
     void selectPosition(float position);
     void selectPosition(std::string_view position);
     void setViewport(float width, float height);
-    [[nodiscard]] std::string inspectField(float x, float y, float width, float height,
-        const std::shared_ptr<const services::RenderedFieldSlice>& displayed_slice) const;
+    [[nodiscard]] std::string inspectField(
+        float x,
+        float y,
+        float width,
+        float height,
+        const std::shared_ptr<const services::RenderedFieldSlice>& displayed_slice
+    ) const;
 
     tpc::utilities::event_handler<> main_state_changed;
     tpc::utilities::event_handler<> settings_state_changed;
@@ -138,6 +150,8 @@ private:
     MainWindowViewState main_state_;
     FieldWindowViewState field_state_;
     std::vector<models::Sensor> sensors_;
+    std::vector<models::SensorInfo> sensor_configuration_;
+    std::uint64_t settings_revision_{};
     std::unordered_map<std::uint32_t, std::size_t> sensor_indices_;
     models::FieldGeometry geometry_;
     double position_{};

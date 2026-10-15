@@ -1,40 +1,49 @@
 #pragma once
 
+#include <cmath>
+
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <expected>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
-#include <nlohmann/json.hpp>
 
 namespace tpc_slint::models {
 
 /** Immutable Cartesian reference grid. No extrapolation beyond measured bounds. */
 class ReferenceFieldMap final {
 public:
-    static std::expected<std::shared_ptr<const ReferenceFieldMap>, std::string> load(const std::filesystem::path& path) {
+    static std::expected<std::shared_ptr<const ReferenceFieldMap>, std::string> load(
+        const std::filesystem::path& path
+    ) {
         try {
-            if (!path.is_absolute()) return std::unexpected("Reference map path must be absolute");
+            if (!path.is_absolute())
+                return std::unexpected("Reference map path must be absolute");
             if (std::filesystem::file_size(path) > 512ULL * 1024 * 1024)
                 return std::unexpected("Reference map exceeds the file size budget");
             std::ifstream input{path};
-            if (!input) return std::unexpected("Cannot open reference field map");
+            if (!input)
+                return std::unexpected("Cannot open reference field map");
             nlohmann::json json;
             input >> json;
             const auto unit = json.at("coordinate_unit").get<std::string>();
-            if ((unit != "mm" && unit != "cm") || json.at("field_unit") != "G"
-                || json.at("components") != "Cartesian")
+            if ((unit != "mm" && unit != "cm") || json.at("field_unit") != "G" || json.at("components") != "Cartesian")
                 return std::unexpected("Reference map must declare mm (or legacy cm), G and Cartesian components");
             auto result = std::make_shared<ReferenceFieldMap>();
-            result->axes_ = {json.at("x").get<std::vector<double>>(), json.at("y").get<std::vector<double>>(),
-                json.at("z").get<std::vector<double>>()};
+            result->axes_ = {
+                json.at("x").get<std::vector<double>>(),
+                json.at("y").get<std::vector<double>>(),
+                json.at("z").get<std::vector<double>>()
+            };
             std::size_t count = 1;
             for (auto& axis : result->axes_) {
-                if (unit == "cm") for (auto& value : axis) value *= 10.0;
+                if (unit == "cm")
+                    for (auto& value : axis)
+                        value *= 10.0;
                 if (axis.size() < 2 || axis.size() > 1024 || count > 4'000'000 / axis.size())
                     return std::unexpected("Invalid reference grid dimensions");
                 for (std::size_t i = 0; i < axis.size(); ++i)
@@ -43,10 +52,12 @@ public:
                 count *= axis.size();
             }
             result->field_ = json.at("field").get<std::vector<std::array<double, 3>>>();
-            if (result->field_.size() != count) return std::unexpected("Reference map has missing grid nodes");
+            if (result->field_.size() != count)
+                return std::unexpected("Reference map has missing grid nodes");
             for (const auto& vector : result->field_)
                 for (const auto value : vector)
-                    if (!std::isfinite(value)) return std::unexpected("Non-finite reference field value");
+                    if (!std::isfinite(value))
+                        return std::unexpected("Non-finite reference field value");
             return std::shared_ptr<const ReferenceFieldMap>{std::move(result)};
         } catch (const std::exception& error) {
             return std::unexpected("Invalid reference map: " + std::string{error.what()});
@@ -70,8 +81,8 @@ public:
             const auto dy = (corner >> 1) & 1;
             const auto dz = (corner >> 2) & 1;
             const auto index = ((cell[2] + dz) * axes_[1].size() + cell[1] + dy) * axes_[0].size() + cell[0] + dx;
-            const double weight = (dx ? amount[0] : 1 - amount[0]) * (dy ? amount[1] : 1 - amount[1])
-                * (dz ? amount[2] : 1 - amount[2]);
+            const double weight =
+                (dx ? amount[0] : 1 - amount[0]) * (dy ? amount[1] : 1 - amount[1]) * (dz ? amount[2] : 1 - amount[2]);
             for (std::size_t component = 0; component < 3; ++component)
                 result[component] += weight * field_[index][component];
         }
@@ -82,4 +93,4 @@ private:
     std::array<std::vector<double>, 3> axes_;
     std::vector<std::array<double, 3>> field_;
 };
-} // namespace tpc_slint::models
+}  // namespace tpc_slint::models

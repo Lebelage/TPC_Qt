@@ -1,0 +1,331 @@
+import { Theme, PlotTheme } from "theme.slint";
+
+export struct MapTick { position: float, label: string, zero: bool, major: bool }
+export struct MapSensor { u: float, v: float, label: string, in-slice: bool }
+
+component GridLine inherits Path {
+    in property <bool> vertical;
+    in property <bool> major;
+    in property <bool> origin;
+    viewbox-width: root.width / 1px;
+    viewbox-height: root.height / 1px;
+    fit: fill;
+    stroke: root.origin ? PlotTheme.grid-origin : root.major ? PlotTheme.grid-major : PlotTheme.grid-minor;
+    stroke-width: 1px;
+    anti-alias: true;
+    MoveTo { x: root.vertical ? 2 : 0; y: root.vertical ? 0 : 2; }
+    LineTo { x: root.vertical ? 2 : root.width / 1px; y: root.vertical ? root.height / 1px : 2; }
+}
+
+export component FieldMap inherits Rectangle {
+    in property <image> source;
+    in property <bool> available;
+    in property <bool> loading;
+    in property <int> axis: 2;
+    in property <float> image-width: 1;
+    in property <float> image-height: 1;
+    in property <float> horizontal-minimum;
+    in property <float> horizontal-maximum;
+    in property <float> vertical-minimum;
+    in property <float> vertical-maximum;
+    in property <string> field-unit: "G";
+    in property <[MapTick]> color-ticks;
+    in property <float> grid-step;
+    in property <[MapTick]> horizontal-ticks;
+    in property <[MapTick]> vertical-ticks;
+    in property <[MapSensor]> sensors;
+    in property <bool> show-grid: true;
+    in property <bool> show-sensors: true;
+    in-out property <float> zoom: 1;
+    out property <bool> hovering: pointer.has-hover && !root.dragging;
+    out property <length> pointer-x: canvas.x + pointer.mouse-x;
+    out property <length> pointer-y: canvas.y + pointer.mouse-y;
+    out property <length> plot-x: canvas.x;
+    out property <length> plot-y: canvas.y;
+    out property <length> plot-width: canvas.width;
+    out property <length> plot-height: canvas.height;
+    callback inspect-field(float, float, float, float) -> string;
+    callback probe-changed(string);
+    callback viewport-changed(float, float);
+    callback zoom-changed(float);
+    callback view-changed(float, float, float, float, float, float);
+
+    private property <float> pan-u: 0;
+    private property <float> pan-v: 0;
+    private property <bool> dragging: false;
+    private property <length> drag-x;
+    private property <length> drag-y;
+    private property <length> start-pan-x;
+    private property <length> start-pan-y;
+    private property <float> u-span: root.horizontal-maximum - root.horizontal-minimum;
+    private property <float> v-span: root.vertical-maximum - root.vertical-minimum;
+    // Include the half-pixel borders: equal physical distances have equal screen lengths.
+    private property <float> intrinsic-width: root.u-span > 0 && root.v-span > 0
+        ? root.u-span * root.image-width / max(1, root.image-width - 1) : root.image-width;
+    private property <float> intrinsic-height: root.u-span > 0 && root.v-span > 0
+        ? root.v-span * root.image-height / max(1, root.image-height - 1) : root.image-height;
+    private property <length> base-width: min(max(1px, canvas.width - 24px),
+        max(1px, canvas.height - 24px) * root.intrinsic-width / max(0.000001, root.intrinsic-height));
+    private property <length> base-height: root.base-width * root.intrinsic-height / max(0.000001, root.intrinsic-width);
+    private property <length> map-width: root.base-width * root.zoom;
+    private property <length> map-height: root.base-height * root.zoom;
+    private property <length> limit-x: max(0px, (root.map-width + canvas.width) / 2 - 48px);
+    private property <length> limit-y: max(0px, (root.map-height + canvas.height) / 2 - 48px);
+    private property <length> offset-x: clamp(root.pan-u * root.map-width, -root.limit-x, root.limit-x);
+    private property <length> offset-y: clamp(root.pan-v * root.map-height, -root.limit-y, root.limit-y);
+    private property <length> map-x: (canvas.width - root.map-width) / 2 + root.offset-x;
+    private property <length> map-y: (canvas.height - root.map-height) / 2 + root.offset-y;
+    private property <string> u-axis: root.axis == 2 ? "X" : "Z";
+    private property <string> v-axis: root.axis == 1 ? "X" : "Y";
+    private property <string> normal-axis: root.axis == 0 ? "X" : root.axis == 1 ? "Y" : "Z";
+    private property <float> cursor-u: root.horizontal-minimum + root.u-span
+        * (((pointer.mouse-x - root.map-x) / root.map-width) * root.image-width - 0.5) / max(1, root.image-width - 1);
+    private property <float> cursor-v-fraction: (((pointer.mouse-y - root.map-y) / root.map-height)
+        * root.image-height - 0.5) / max(1, root.image-height - 1);
+    private property <float> cursor-v: root.vertical-minimum + root.v-span
+        * (root.axis == 2 ? 1 - root.cursor-v-fraction : root.cursor-v-fraction);
+    background: PlotTheme.background;
+    clip: true;
+
+    function publish-view() {
+        root.view-changed(canvas.width / 1px, canvas.height / 1px, root.map-x / 1px,
+            root.map-y / 1px, root.map-width / 1px, root.map-height / 1px);
+    }
+    public function refresh-view() { root.publish-view(); }
+    public function reset-view() {
+        root.pan-u = 0;
+        root.pan-v = 0;
+        root.zoom = 1;
+        root.zoom-changed(1);
+        root.probe-changed("");
+        root.publish-view();
+    }
+    public function zoom-at(value: float, px: length, py: length) {
+        if root.available {
+            let next = clamp(value, 1, 8);
+            let ratio = next / root.zoom;
+            let x = (px - canvas.width / 2) * (1 - ratio) + root.offset-x * ratio;
+            let y = (py - canvas.height / 2) * (1 - ratio) + root.offset-y * ratio;
+            root.zoom = next;
+            root.pan-u = clamp(x, -root.limit-x, root.limit-x) / root.map-width;
+            root.pan-v = clamp(y, -root.limit-y, root.limit-y) / root.map-height;
+            root.probe-changed("");
+            root.zoom-changed(next);
+            root.publish-view();
+        }
+    }
+    public function zoom-centred(value: float) {
+        root.zoom-at(value, canvas.width / 2, canvas.height / 2);
+    }
+    changed map-width => { root.publish-view(); root.probe-changed(""); }
+    changed map-height => { root.publish-view(); root.probe-changed(""); }
+    changed map-x => { root.publish-view(); }
+    changed map-y => { root.publish-view(); }
+
+    canvas := Rectangle {
+        x: 96px; y: 44px; width: max(1px, root.width - 224px); height: max(1px, root.height - 164px);
+        background: PlotTheme.surface;
+        clip: true;
+        init => { root.viewport-changed(self.width / 1px, self.height / 1px); root.publish-view(); }
+        changed width => { root.viewport-changed(self.width / 1px, self.height / 1px); root.publish-view(); }
+        changed height => { root.viewport-changed(self.width / 1px, self.height / 1px); root.publish-view(); }
+        Image {
+            visible: root.available;
+            x: root.map-x; y: root.map-y; width: root.map-width; height: root.map-height;
+            source: root.source; image-fit: fill; image-rendering: smooth;
+        }
+        if root.available: Rectangle {
+            x: root.map-x; y: root.map-y; width: root.map-width; height: root.map-height;
+            background: transparent; border-color: PlotTheme.frame; border-width: 1px;
+        }
+        if root.show-grid && root.available: Rectangle {
+            width: canvas.width; height: canvas.height;
+            for tick in root.horizontal-ticks: GridLine {
+                x: round((root.map-x + tick.position * root.map-width) / 1px) * 1px + 0.5px - 2px;
+                width: 4px; height: canvas.height;
+                vertical: true; major: tick.major; origin: tick.zero;
+            }
+            for tick in root.vertical-ticks: GridLine {
+                y: round((root.map-y + tick.position * root.map-height) / 1px) * 1px + 0.5px - 2px;
+                width: canvas.width; height: 4px;
+                vertical: false; major: tick.major; origin: tick.zero;
+            }
+        }
+        if root.show-sensors && root.available: Rectangle {
+            width: canvas.width; height: canvas.height;
+            for sensor in root.sensors: Rectangle {
+                visible: self.x + 5px >= 0px && self.x + 5px <= canvas.width
+                    && self.y + 5px >= 0px && self.y + 5px <= canvas.height;
+                x: root.map-x + sensor.u * root.map-width - 5px;
+                y: root.map-y + sensor.v * root.map-height - 5px;
+                width: 10px; height: 10px; background: transparent;
+                Path {
+                    width: 10px; height: 10px; viewbox-width: 10; viewbox-height: 10;
+                    commands: "M 5 1 A 4 4 0 1 1 5 9 A 4 4 0 1 1 5 1 Z";
+                    fill: sensor.in-slice ? PlotTheme.sensor-fill : PlotTheme.background;
+                    stroke: PlotTheme.text; stroke-width: 2px; anti-alias: true;
+                }
+                Rectangle {
+                    x: clamp(parent.x > canvas.width * 0.65 ? -self.width - 5px : 15px,
+                        -parent.x + 4px, canvas.width - parent.x - self.width - 4px);
+                    // Keep neighbouring ring labels on the same side of their points.
+                    y: clamp(parent.y < canvas.height / 2 ? 15px : -self.height - 5px,
+                        -parent.y + 4px, canvas.height - parent.y - self.height - 4px);
+                    width: min(label.preferred-width + 12px, canvas.width - 12px); height: 26px;
+                    background: PlotTheme.sensor-label; border-color: PlotTheme.sensor-border; border-width: 1px; border-radius: 3px;
+                    label := Text {
+                        x: 6px; width: parent.width - 12px; height: parent.height;
+                        text: sensor.label; color: sensor.in-slice ? PlotTheme.sensor-in-slice : PlotTheme.text;
+                        font-size: Theme.font-label; font-weight: Theme.weight-medium; overflow: elide; vertical-alignment: center;
+                    }
+                }
+            }
+        }
+        pointer := TouchArea {
+            enabled: root.available;
+            mouse-cursor: root.dragging ? grabbing : crosshair;
+            pointer-event(event) => {
+                if event.kind == PointerEventKind.down && (event.button == PointerEventButton.left || event.button == PointerEventButton.middle) {
+                    root.dragging = true;
+                    root.drag-x = self.mouse-x; root.drag-y = self.mouse-y;
+                    root.start-pan-x = root.offset-x; root.start-pan-y = root.offset-y;
+                    root.probe-changed("");
+                }
+                if event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel {
+                    root.dragging = false;
+                }
+                if event.kind == PointerEventKind.move {
+                    if root.dragging {
+                        root.pan-u = clamp(root.start-pan-x + self.mouse-x - root.drag-x, -root.limit-x, root.limit-x) / root.map-width;
+                        root.pan-v = clamp(root.start-pan-y + self.mouse-y - root.drag-y, -root.limit-y, root.limit-y) / root.map-height;
+                        root.publish-view();
+                    } else {
+                        root.publish-view();
+                        root.probe-changed(root.loading ? "" : root.inspect-field(
+                            (self.mouse-x - root.map-x) / 1px, (self.mouse-y - root.map-y) / 1px,
+                            root.map-width / 1px, root.map-height / 1px));
+                    }
+                }
+            }
+            scroll-event(event) => {
+                if event.delta-y != 0px {
+                    root.zoom-at(root.zoom * pow(1.002, event.delta-y / 1px), self.mouse-x, self.mouse-y);
+                }
+                return accept;
+            }
+            double-clicked => { root.reset-view(); }
+        }
+    }
+
+    // A chart frame, axis ticks and grid all use the same camera transform.
+    Rectangle {
+        x: canvas.x - 1px; y: canvas.y - 1px;
+        width: canvas.width + 2px; height: canvas.height + 2px;
+        background: transparent; border-color: PlotTheme.text-muted; border-width: 1px;
+    }
+    Text {
+        x: canvas.x; y: 10px; height: 24px;
+        text: "Magnetic field · " + (root.axis == 2 ? "XY" : root.axis == 1 ? "XZ" : "YZ") + " plane";
+        color: PlotTheme.text; font-size: Theme.font-heading; font-weight: Theme.weight-medium; vertical-alignment: center;
+    }
+    bottom-axis := Rectangle {
+        x: canvas.x; y: canvas.y + canvas.height; width: canvas.width; height: 30px;
+        background: transparent; clip: true;
+        if root.available: Rectangle {
+            width: bottom-axis.width; height: bottom-axis.height;
+            for tick in root.horizontal-ticks: Rectangle {
+                private property <length> position: round((root.map-x + tick.position * root.map-width) / 1px) * 1px;
+                x: self.position; y: 0px;
+                width: 1px; height: tick.major ? 6px : 3px; background: PlotTheme.border;
+                if tick.major: Text {
+                    visible: parent.position > 30px && parent.position < bottom-axis.width - 30px;
+                    x: -38px; y: 8px; width: 76px; height: 20px;
+                    text: tick.label; color: PlotTheme.text;
+                    font-size: Theme.font-label; font-weight: Theme.weight-medium; horizontal-alignment: center; vertical-alignment: center;
+                }
+            }
+        }
+    }
+    left-axis := Rectangle {
+        x: 32px; y: canvas.y; width: canvas.x - 32px; height: canvas.height;
+        background: transparent; clip: true;
+        if root.available: Rectangle {
+            width: left-axis.width; height: left-axis.height;
+            for tick in root.vertical-ticks: Rectangle {
+                private property <length> position: round((root.map-y + tick.position * root.map-height) / 1px) * 1px;
+                x: parent.width - (tick.major ? 6px : 3px); y: self.position;
+                width: tick.major ? 6px : 3px; height: 1px; background: PlotTheme.border;
+                if tick.major: Text {
+                    visible: parent.position > 11px && parent.position < left-axis.height - 11px;
+                    x: -56px; y: -10px; width: 50px; height: 20px;
+                    text: tick.label; color: PlotTheme.text;
+                    font-size: Theme.font-label; font-weight: Theme.weight-medium; horizontal-alignment: right; vertical-alignment: center;
+                }
+            }
+        }
+    }
+    Text {
+        x: canvas.x; y: canvas.y + canvas.height + 33px;
+        width: canvas.width; height: 22px;
+        text: root.u-axis + " (mm)"; color: PlotTheme.text; font-size: Theme.font-readout; font-weight: Theme.weight-medium;
+        horizontal-alignment: center; vertical-alignment: center;
+    }
+    Text {
+        x: 8px; y: 10px; width: canvas.x - 16px; height: 24px;
+        text: root.v-axis + " (mm)"; color: PlotTheme.text; font-size: Theme.font-readout; font-weight: Theme.weight-medium;
+        horizontal-alignment: center; vertical-alignment: center;
+    }
+    // The vertical colour scale belongs to the plot and keeps its size on zoom.
+    if root.available: Rectangle {
+        x: canvas.x + canvas.width + 24px; y: canvas.y;
+        width: 94px; height: canvas.height; background: transparent;
+        Text {
+            x: -4px; y: -30px; width: 94px; height: 24px;
+            text: "|B| (" + root.field-unit + ")"; color: PlotTheme.text; font-size: Theme.font-readout; font-weight: Theme.weight-medium;
+            vertical-alignment: center;
+        }
+        bar := Rectangle {
+            x: 0px; y: 0px; width: 18px; height: parent.height;
+            background: root.color-ticks.length > 1
+                ? @linear-gradient(0deg, #440154 0%, #414487 20%, #2a788e 40%, #22a884 60%, #7ad151 80%, #fde725 100%)
+                : #269089;
+            border-color: PlotTheme.text-muted; border-width: 1px;
+        }
+        for tick in root.color-ticks: Rectangle {
+            x: 18px; y: round((1 - tick.position) * (bar.height - 1px) / 1px) * 1px;
+            width: 5px; height: 1px; background: PlotTheme.border;
+            Text {
+                x: 9px; y: -10px; width: 68px; height: 20px;
+                text: tick.label;
+                color: PlotTheme.text; font-size: Theme.font-caption; font-weight: Theme.weight-medium; vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+    // Keep orientation and sensor legend outside the data rectangle.
+    Text {
+        x: canvas.x; y: canvas.y + canvas.height + 61px; height: 20px;
+        text: root.show-sensors ? "○ Hall projection   ●* Sensor in slice" : "Hall sensors hidden";
+        color: PlotTheme.text-muted; font-size: Theme.font-caption; font-weight: Theme.weight-normal; vertical-alignment: center;
+    }
+    Text {
+        x: canvas.x + canvas.width - self.width; y: canvas.y + canvas.height + 61px; height: 20px;
+        text: "+" + root.u-axis + " →   +" + root.v-axis + (root.axis == 2 ? " ↑   " : " ↓   ")
+            + (root.axis == 1 ? "⊗ +" : "⊙ +") + root.normal-axis;
+        color: PlotTheme.text; font-size: Theme.font-caption; font-weight: Theme.weight-medium; vertical-alignment: center;
+    }
+    Rectangle {
+        x: 0px; y: root.height - 32px; height: 32px; width: root.width; background: PlotTheme.footer;
+        Rectangle { x: 0px; y: 0px; height: 1px; width: parent.width; background: PlotTheme.border-soft; }
+        Text {
+            x: 12px; height: parent.height; color: PlotTheme.text; font-size: Theme.font-caption; font-weight: Theme.weight-normal; vertical-alignment: center;
+            text: root.hovering ? root.u-axis + " " + round(root.cursor-u * 10) / 10 + "   " + root.v-axis + " " + round(root.cursor-v * 10) / 10 + " mm"
+                : root.show-grid && root.grid-step > 0 ? "Grid: " + root.grid-step + " mm · Equal axis scale" : "Equal axis scale";
+        }
+        Text {
+            x: parent.width - self.width - 12px; height: parent.height;
+            text: "Wheel: zoom   ·   Drag: pan   ·   Double-click: fit";
+            color: PlotTheme.text-muted; font-size: Theme.font-caption; font-weight: Theme.weight-normal; vertical-alignment: center;
+        }
+    }
+}

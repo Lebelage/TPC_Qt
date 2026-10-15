@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <iterator>
 #include <ranges>
 #include <span>
 #include <string>
@@ -42,17 +43,21 @@ struct SensorName {
 
         SensorName result;
         switch (text.front()) {
-            case 'W': result.id = SensorNameKey::W; break;
-            case 'E': result.id = SensorNameKey::E; break;
-            default: return invalidName();
+            case 'W':
+                result.id = SensorNameKey::W;
+                break;
+            case 'E':
+                result.id = SensorNameKey::E;
+                break;
+            default:
+                return invalidName();
         }
 
         const bool has_component = text.back() == 'R' || text.back() == 'F' || text.back() == 'Z';
         const std::size_t number_length = text.size() - 1 - static_cast<std::size_t>(has_component);
         const std::string_view number_text = text.substr(1, number_length);
-        const auto [end, error] = std::from_chars(
-            number_text.data(), number_text.data() + number_text.size(), result.number
-        );
+        const auto [end, error] =
+            std::from_chars(number_text.data(), number_text.data() + number_text.size(), result.number);
 
         if (error != std::errc{} || end != number_text.data() + number_text.size()) {
             return invalidName();
@@ -67,10 +72,14 @@ struct SensorName {
         }
 
         switch (text.back()) {
-            case 'R': return SensorNameComponent::R;
-            case 'F': return SensorNameComponent::F;
-            case 'Z': return SensorNameComponent::Z;
-            default: return std::unexpected{"Invalid sensor name: " + std::string{text}};
+            case 'R':
+                return SensorNameComponent::R;
+            case 'F':
+                return SensorNameComponent::F;
+            case 'Z':
+                return SensorNameComponent::Z;
+            default:
+                return std::unexpected{"Invalid sensor name: " + std::string{text}};
         }
     }
 
@@ -119,15 +128,56 @@ struct Sensor {
     }
 };
 
+struct DiscoveredSensor {
+    SensorName name;
+    std::array<bool, 3> channels{};
+
+    [[nodiscard]] bool complete() const noexcept {
+        return std::ranges::all_of(channels, [](bool found) {
+            return found;
+        });
+    }
+};
+
+inline std::vector<DiscoveredSensor> discoverSensors(std::span<const std::string> channels) {
+    std::vector<DiscoveredSensor> result;
+    for (const auto& channel : channels) {
+        const auto name = SensorName::parse(channel);
+        const auto component = SensorName::parseComponent(channel);
+        if (!name || !component || name->number == 0 || name->toString() + channel.back() != channel)
+            continue;
+        auto sensor = std::ranges::find_if(result, [&](const auto& candidate) {
+            return candidate.name.id == name->id && candidate.name.number == name->number;
+        });
+        if (sensor == result.end()) {
+            result.push_back({*name});
+            sensor = std::prev(result.end());
+        }
+        sensor->channels[static_cast<std::size_t>(*component)] = true;
+    }
+    std::ranges::sort(result, {}, [](const auto& sensor) {
+        return std::pair{static_cast<char>(sensor.name.id), sensor.name.number};
+    });
+    return result;
+}
+
 /** Calculation-oriented snapshot of configured sensors and latest readings. */
 class TpcDataModel final {
 public:
     using ReceivedFrame = std::unordered_map<std::string, double>;
 
-    [[nodiscard]] std::span<const Sensor> sensors() const noexcept { return sensors_; }
-    [[nodiscard]] std::array<std::size_t, 3> grid() const noexcept { return grid_; }
-    [[nodiscard]] double length() const noexcept { return length_; }
-    [[nodiscard]] double radius() const noexcept { return radius_; }
+    [[nodiscard]] std::span<const Sensor> sensors() const noexcept {
+        return sensors_;
+    }
+    [[nodiscard]] std::array<std::size_t, 3> grid() const noexcept {
+        return grid_;
+    }
+    [[nodiscard]] double length() const noexcept {
+        return length_;
+    }
+    [[nodiscard]] double radius() const noexcept {
+        return radius_;
+    }
 
     void setSensors(std::vector<Sensor> sensors) {
         sensors_ = std::move(sensors);
@@ -139,7 +189,9 @@ public:
         applyReceivedFrame();
     }
 
-    void setGrid(std::array<std::size_t, 3> grid) noexcept { grid_ = grid; }
+    void setGrid(std::array<std::size_t, 3> grid) noexcept {
+        grid_ = grid;
+    }
 
     void setGeometry(double length, double radius) noexcept {
         length_ = length;

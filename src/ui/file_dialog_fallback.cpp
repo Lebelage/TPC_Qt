@@ -2,6 +2,10 @@
 
 namespace tpc_slint::ui {
 
+std::optional<std::filesystem::path> showSettingsOpenDialog() {
+    return std::nullopt; // The settings page also accepts a file path directly.
+}
+
 std::optional<std::filesystem::path> showVtkSaveDialog() {
     return std::nullopt;
 }

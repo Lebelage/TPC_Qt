@@ -5,6 +5,19 @@
 
 namespace tpc_slint::ui {
 
+std::optional<std::filesystem::path> showSettingsOpenDialog() {
+    @autoreleasepool {
+        NSOpenPanel* panel = [NSOpenPanel openPanel];
+        panel.title = @"Open TPC configuration";
+        panel.allowedContentTypes = @[[UTType typeWithFilenameExtension:@"json"]];
+        panel.allowsMultipleSelection = NO;
+        panel.canChooseDirectories = NO;
+        if ([panel runModal] != NSModalResponseOK || panel.URL == nil) return std::nullopt;
+        const char* path = panel.URL.fileSystemRepresentation;
+        return path ? std::optional<std::filesystem::path>{path} : std::nullopt;
+    }
+}
+
 std::optional<std::filesystem::path> showVtkSaveDialog() {
     @autoreleasepool {
         NSSavePanel* panel = [NSSavePanel savePanel];

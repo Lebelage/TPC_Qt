@@ -1,0 +1,146 @@
+import { ListView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { BodyText, CaptionText, Panel, SensorToggle, TableCell } from "components.slint";
+
+export struct SensorRow {
+    name: string,
+    radial: string,
+    azimuthal: string,
+    longitudinal: string,
+    coordinate-x: string,
+    coordinate-y: string,
+    coordinate-z: string,
+    enabled: bool,
+    selectable: bool,
+    status: string,
+}
+
+global Columns {
+    out property <length> selection: 64px;
+    out property <length> identity: 128px;
+    out property <length> value: 88px;
+    out property <length> coordinate: 96px;
+    out property <length> gap: 8px;
+    out property <length> minimum-width: self.selection + self.identity + 3 * self.value
+        + 3 * self.coordinate + 7 * self.gap + 2 * Theme.padding;
+}
+
+component GroupLabel inherits CaptionText {
+    font-size: Theme.font-small;
+    font-weight: Theme.weight-bold;
+    vertical-alignment: center;
+}
+
+component ColumnLabel inherits BodyText {
+    font-size: Theme.font-label;
+    font-weight: Theme.weight-medium;
+    color: Theme.text-muted;
+    horizontal-alignment: center;
+}
+
+component TableHeader inherits Rectangle {
+    height: 60px;
+    background: Theme.surface-raised;
+    VerticalLayout {
+        padding-left: Theme.padding;
+        padding-right: Theme.padding;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        spacing: 4px;
+        HorizontalLayout {
+            spacing: Columns.gap;
+            GroupLabel { text: "USE"; width: Columns.selection; }
+            GroupLabel { text: "SENSOR"; width: Columns.identity; }
+            GroupLabel {
+                text: "CHANNEL VALUES · G / mV";
+                width: 3 * Columns.value + 2 * Columns.gap;
+                horizontal-alignment: center;
+            }
+            GroupLabel { text: "COORDINATES · mm"; horizontal-stretch: 1; horizontal-alignment: center; }
+        }
+        HorizontalLayout {
+            spacing: Columns.gap;
+            ColumnLabel { text: "ON / OFF"; width: Columns.selection; horizontal-alignment: left; }
+            ColumnLabel { text: "ID / status"; width: Columns.identity; horizontal-alignment: left; }
+            ColumnLabel { text: "R"; width: Columns.value; }
+            ColumnLabel { text: "F"; width: Columns.value; }
+            ColumnLabel { text: "Z"; width: Columns.value; }
+            ColumnLabel { text: "X"; min-width: Columns.coordinate; horizontal-stretch: 1; }
+            ColumnLabel { text: "Y"; min-width: Columns.coordinate; horizontal-stretch: 1; }
+            ColumnLabel { text: "Z"; min-width: Columns.coordinate; horizontal-stretch: 1; }
+        }
+    }
+}
+
+component SensorTableRow inherits Rectangle {
+    in property <SensorRow> data;
+    in property <bool> alternate;
+    in property <bool> busy;
+    callback toggled(bool);
+    private property <brush> text-color: !root.data.selectable ? Theme.danger
+        : root.data.enabled ? Theme.text : Theme.text-muted;
+    private property <brush> value-color: !root.data.selectable ? Theme.danger
+        : root.data.enabled ? Theme.accent-hover : Theme.text-muted;
+    height: 56px;
+    background: hover.has-hover ? Theme.surface-hover : root.alternate ? Theme.surface-alternate : Theme.surface;
+    hover := TouchArea { mouse-cursor: default; scroll-event => { return reject; } }
+    HorizontalLayout {
+        padding-left: Theme.padding;
+        padding-right: Theme.padding;
+        spacing: Columns.gap;
+        SensorToggle {
+            width: Columns.selection;
+            sensor-name: root.data.name;
+            checked: root.data.enabled;
+            active: root.data.selectable && !root.busy;
+            toggled(value) => { root.toggled(value); }
+        }
+        VerticalLayout {
+            width: Columns.identity;
+            padding-top: 9px; padding-bottom: 9px; spacing: 2px;
+            BodyText { text: root.data.name; color: root.text-color; font-weight: Theme.weight-bold; }
+            CaptionText {
+                text: root.data.status; color: root.text-color;
+                font-size: Theme.font-small; overflow: elide;
+            }
+        }
+        TableCell { text: root.data.radial; width: Columns.value; color: root.value-color; }
+        TableCell { text: root.data.azimuthal; width: Columns.value; color: root.value-color; }
+        TableCell { text: root.data.longitudinal; width: Columns.value; color: root.value-color; }
+        TableCell { text: root.data.coordinate-x; min-width: Columns.coordinate; horizontal-stretch: 1; color: root.text-color; }
+        TableCell { text: root.data.coordinate-y; min-width: Columns.coordinate; horizontal-stretch: 1; color: root.text-color; }
+        TableCell { text: root.data.coordinate-z; min-width: Columns.coordinate; horizontal-stretch: 1; color: root.text-color; }
+    }
+    Rectangle { x: 0px; y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.border; }
+}
+
+export component SensorTable inherits Panel {
+    in property <[SensorRow]> rows;
+    in property <bool> busy;
+    callback sensor-toggled(string, bool);
+    clip: true;
+    // One scrollable list keeps pointer/wheel handling and virtualization together.
+    // Only horizontal motion is mirrored by the fixed column header.
+    header-clip := Rectangle {
+        x: 1px; y: 1px; width: sensor-list.visible-width; height: 60px;
+        background: Theme.surface-raised; clip: true;
+        TableHeader { x: sensor-list.content-x; y: 0px; width: sensor-list.content-width; }
+    }
+    sensor-list := ListView {
+        x: 1px; y: header-clip.y + header-clip.height;
+        width: root.width - 2px; height: root.height - self.y - 1px;
+        content-width: max(self.visible-width, Columns.minimum-width);
+        for row[index] in root.rows: SensorTableRow {
+            data: row;
+            alternate: mod(index, 2) != 0;
+            busy: root.busy;
+            toggled(value) => { root.sensor-toggled(row.name, value); }
+        }
+    }
+    if root.rows.length == 0: VerticalLayout {
+        x: Theme.padding; y: 60px; width: root.width - 2 * Theme.padding; height: root.height - 60px;
+        alignment: center; spacing: 8px;
+        BodyText { text: "No configured sensors"; font-weight: Theme.weight-medium; horizontal-alignment: center; }
+        CaptionText { text: "Load a configuration or connect to discover sensors"; wrap: word-wrap; horizontal-alignment: center; }
+    }
+}

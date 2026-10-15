@@ -19,6 +19,9 @@ public:
 
     [[nodiscard]] std::expected<void, std::string> writeSettings(const std::string& settings_text);
     [[nodiscard]] std::expected<std::string, std::string> loadSettings() const;
+    [[nodiscard]] static std::expected<std::string, std::string> readSettings(const std::filesystem::path& path);
+    void setSettingsPath(std::filesystem::path path);
+    [[nodiscard]] std::filesystem::path settingsPath() const;
 
 private:
     void initialize();

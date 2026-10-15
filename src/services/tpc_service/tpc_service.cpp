@@ -6,14 +6,25 @@
 #include <utility>
 #include <vector>
 
+#include "models/measurement_quality.hpp"
+#include "models/reference_field_map.hpp"
 #include "services/event_dispatcher/event_dispatcher.hpp"
 #include "services/scoped_subscription.hpp"
 #include "tpc/tpc.hpp"
-#include "models/measurement_quality.hpp"
-#include "models/reference_field_map.hpp"
 
 namespace tpc_slint::services {
 namespace {
+
+auto channelCalibrations(const models::AppSettings& settings) {
+    std::unordered_map<std::string, tpc::system::models::HallCalibration> result;
+    for (const auto& sensor : settings.sensors_info)
+        for (const auto& [component, calibration] : sensor.calibration)
+            result.emplace(
+                sensor.previewable_name + component,
+                tpc::system::models::HallCalibration{calibration.k, calibration.v0_mv}
+            );
+    return result;
+}
 
 [[nodiscard]] std::vector<tpc::analytics::models::Measurement> createMeasurements(
     std::span<const models::Sensor> sensors
@@ -23,12 +34,10 @@ namespace {
 
     for (const auto& sensor : sensors) {
         tpc::analytics::models::PointComponents point{
-            .components = sensor.position,
-            .coordinate_type = tpc::analytics::models::CoordinateType::Cartesian
+            .components = sensor.position, .coordinate_type = tpc::analytics::models::CoordinateType::Cartesian
         };
         tpc::analytics::models::FieldComponents field{
-            .components = sensor.values,
-            .coordinate_type = tpc::analytics::models::CoordinateType::Cylindric
+            .components = sensor.values, .coordinate_type = tpc::analytics::models::CoordinateType::Cylindric
         };
 
         measurements.push_back({.point_components = point, .field_components = field});
@@ -59,12 +68,10 @@ struct TpcServiceBackend final {
     std::string calculation_warning;
 };
 
-TpcService::TpcService(EventDispatcher& events)
-    : events_(events), backend_(std::make_unique<TpcServiceBackend>()) {
-    backend_->settings_subscription.subscribe(
-        events_.settings_changed,
-        [this](const models::AppSettings& settings) { onSettingsChanged(settings); }
-    );
+TpcService::TpcService(EventDispatcher& events) : events_(events), backend_(std::make_unique<TpcServiceBackend>()) {
+    backend_->settings_subscription.subscribe(events_.settings_changed, [this](const models::AppSettings& settings) {
+        onSettingsChanged(settings);
+    });
 }
 
 TpcService::~TpcService() {
@@ -99,7 +106,9 @@ bool TpcService::connectAsync(std::string endpoint) {
     backend_->tpc = std::move(*result);
     {
         std::scoped_lock data_lock{data_mutex_};
-        backend_->tpc->set_input_in_gauss(settings_snapshot_.analysis.input_in_gauss);
+        backend_->tpc->set_channel_calibrations(
+            channelCalibrations(settings_snapshot_), settings_snapshot_.analysis.input_in_gauss
+        );
     }
     subscribeToBackendEvents();
     backend_->tpc->start_async();
@@ -109,10 +118,23 @@ bool TpcService::connectAsync(std::string endpoint) {
 }
 
 void TpcService::disconnect() {
-    std::shared_lock backend_lock{backend_mutex_};
-    if (backend_->tpc) {
-        backend_->tpc->stop_async();
+    {
+        std::shared_lock backend_lock{backend_mutex_};
+        if (backend_->tpc)
+            backend_->tpc->stop_async();
     }
+    models::ScientificStatus status;
+    {
+        std::scoped_lock lock{data_mutex_};
+        backend_->connected = false;
+        backend_->samples.clear();
+        field_snapshot_valid_ = false;
+        backend_->scientific_status.data_ready = false;
+        backend_->scientific_status.data_message = "Offline: no current measurements";
+        status = backend_->scientific_status;
+    }
+    events_.connection_state_changed.invoke(false);
+    events_.scientific_status_changed.invoke(status);
 }
 
 std::expected<void, std::string> TpcService::calculateField() {
@@ -134,12 +156,15 @@ std::expected<void, std::string> TpcService::calculateField() {
         field_snapshot_valid_ = false;
         calculation_revision_ = settings_revision_;
         const auto prepared = models::preparePreliminaryMeasurements(settings_snapshot_, backend_->samples);
-        if (!prepared) return std::unexpected(prepared.error());
+        if (!prepared)
+            return std::unexpected(prepared.error());
         measurements = createMeasurements(prepared->sensors);
         backend_->calculation_warning = prepared->warning;
-        if (!backend_->connected) backend_->calculation_warning += " | Offline snapshot";
+        if (!backend_->connected)
+            backend_->calculation_warning += " | Offline snapshot";
         backend_->scientific_status.field_message = backend_->calculation_warning.empty()
-            ? "Calculating field snapshot" : "WARNING: " + backend_->calculation_warning;
+                                                        ? "Calculating field snapshot"
+                                                        : "WARNING: " + backend_->calculation_warning;
         backend_->scientific_status.homogeneous = false;
         status = backend_->scientific_status;
         backend_->calculation_calibrated = models::measurementsInGauss(settings_snapshot_, backend_->samples);
@@ -156,26 +181,32 @@ std::expected<void, std::string> TpcService::calculateField() {
 
     if (!reference_path.empty()) {
         auto reference = models::ReferenceFieldMap::load(reference_path);
-        if (!reference) return std::unexpected(reference.error());
-        auto configured = backend_->tpc->set_reference_field([map = std::move(*reference)](std::array<double, 3> point)
-            -> std::expected<tpc::analytics::models::FieldComponents, std::string> {
-            auto value = map->evaluate(point);
-            if (!value) return std::unexpected(value.error());
-            return tpc::analytics::models::FieldComponents{*value, tpc::analytics::models::CoordinateType::Cartesian};
-        });
-        if (!configured) return configured;
+        if (!reference)
+            return std::unexpected(reference.error());
+        auto configured = backend_->tpc->set_reference_field(
+            [map = std::move(*reference)](
+                std::array<double, 3> point
+            ) -> std::expected<tpc::analytics::models::FieldComponents, std::string> {
+                auto value = map->evaluate(point);
+                if (!value)
+                    return std::unexpected(value.error());
+                return tpc::analytics::models::FieldComponents{
+                    *value, tpc::analytics::models::CoordinateType::Cartesian
+                };
+            }
+        );
+        if (!configured)
+            return configured;
     } else {
         auto configured = backend_->tpc->set_reference_field({});
-        if (!configured) return configured;
+        if (!configured)
+            return configured;
     }
     return backend_->tpc->calculate_field_async(std::move(measurements), grid, radius, length, limits);
 }
 
 std::expected<models::NumericFieldSlice, std::string> TpcService::calculateFieldSlice(
-    int axis,
-    double coordinate,
-    std::array<std::size_t, 2> grid,
-    std::stop_token stop_token
+    int axis, double coordinate, std::array<std::size_t, 2> grid, std::stop_token stop_token
 ) {
     std::shared_lock backend_lock{backend_mutex_};
     if (!backend_->tpc) {
@@ -186,15 +217,18 @@ std::expected<models::NumericFieldSlice, std::string> TpcService::calculateField
     double length = 0.0;
     {
         std::scoped_lock lock{data_mutex_};
-        if (!field_snapshot_valid_) return std::unexpected("No field snapshot for the current settings");
+        if (!field_snapshot_valid_)
+            return std::unexpected("No field snapshot for the current settings");
         radius = tpc_data_.radius();
         length = tpc_data_.length();
     }
 
-    const auto direction = axis == 0 ? tpc::analytics::models::SliceDirection::X
-        : axis == 1 ? tpc::analytics::models::SliceDirection::Y
-                    : tpc::analytics::models::SliceDirection::Z;
-    auto result = backend_->tpc->get_field_slice(direction, coordinate, grid, radius, length, stop_token);
+    const auto direction = axis == 0   ? tpc::analytics::models::SliceDirection::X
+                           : axis == 1 ? tpc::analytics::models::SliceDirection::Y
+                                       : tpc::analytics::models::SliceDirection::Z;
+    auto result = backend_->tpc->get_field_slice(
+        direction, coordinate, grid, radius, length, stop_token, tpc::analytics::models::SliceFraming::FullVolume
+    );
     if (!result) {
         return std::unexpected{result.error()};
     }
@@ -212,15 +246,19 @@ bool TpcService::exportFieldToVtk(std::string_view file_path) {
     std::shared_lock backend_lock{backend_mutex_};
     {
         std::scoped_lock lock{data_mutex_};
-        if (!field_snapshot_valid_) return false;
+        if (!field_snapshot_valid_)
+            return false;
     }
     if (!backend_->tpc) {
         return false;
     }
 
     const auto exported = backend_->tpc->export_to_vtk(file_path);
-    events_.diagnostic.invoke(exported ? LogLevel::Info : LogLevel::Error, "export",
-        exported ? "VTK saved: " + std::string{file_path} : "VTK export failed: " + exported.error());
+    events_.diagnostic.invoke(
+        exported ? LogLevel::Info : LogLevel::Error,
+        "export",
+        exported ? "VTK saved: " + std::string{file_path} : "VTK export failed: " + exported.error()
+    );
     return exported.has_value();
 }
 
@@ -244,16 +282,17 @@ void TpcService::dispose() noexcept {
 
 void TpcService::subscribeToBackendEvents() {
     backend_->connection_subscription.subscribe(
-        backend_->tpc->connection_state_changed_,
-        [this](tpc::system::client::ConnectionState state) {
+        backend_->tpc->connection_state_changed_, [this](tpc::system::client::ConnectionState state) {
             const bool connected = state == tpc::system::client::ConnectionState::SessionActivated;
             models::ScientificStatus status;
             {
                 std::scoped_lock lock{data_mutex_};
                 backend_->connected = connected;
-                if (!connected) backend_->samples.clear();
+                if (!connected)
+                    backend_->samples.clear();
                 backend_->scientific_status.data_ready = false;
-                backend_->scientific_status.data_message = connected ? "Waiting for fresh 36-channel frame" : "Offline: no current measurements";
+                backend_->scientific_status.data_message =
+                    connected ? "Waiting for selected sensor channels" : "Offline: no current measurements";
                 status = backend_->scientific_status;
             }
             events_.connection_state_changed.invoke(connected);
@@ -261,21 +300,23 @@ void TpcService::subscribeToBackendEvents() {
         }
     );
     backend_->initialization_subscription.subscribe(
-        backend_->tpc->initialization_data_received_,
-        [this](tpc::system::models::DiscoveryResult result) {
-            const auto names = models::SensorName::parseNames(result.nodes | std::views::values);
-            if (names) {
-                events_.initialization_data_received.invoke(*names);
-            }
+        backend_->tpc->initialization_data_received_, [this](tpc::system::models::DiscoveryResult result) {
+            std::vector<std::string> channels;
+            channels.reserve(result.nodes.size());
+            for (const auto& name : result.nodes | std::views::values)
+                channels.push_back(name);
+            events_.initialization_data_received.invoke(models::discoverSensors(channels));
         }
     );
     backend_->frame_subscription.subscribe(
-        backend_->tpc->frame_received_,
-        [this](std::unordered_map<std::string, double> frame) { onFrameReceived(std::move(frame)); }
+        backend_->tpc->frame_received_, [this](std::unordered_map<std::string, double> frame) {
+            onFrameReceived(std::move(frame));
+        }
     );
     backend_->field_calculation_subscription.subscribe(
-        backend_->tpc->field_was_calculated_,
-        [this](bool is_calculated) { onFieldWasCalculated(is_calculated); }
+        backend_->tpc->field_was_calculated_, [this](bool is_calculated) {
+            onFieldWasCalculated(is_calculated);
+        }
     );
     backend_->error_subscription.subscribe(backend_->tpc->error_occurred_, [this](std::string error) {
         events_.error_occurred.invoke(std::move(error));
@@ -290,41 +331,69 @@ void TpcService::subscribeToBackendEvents() {
             std::scoped_lock lock{data_mutex_};
             backend_->samples.clear();
             for (const auto& [name, sample] : frame)
-                backend_->samples.emplace(name, models::MeasurementSample{sample.value, sample.received_at,
-                    sample.source_time, sample.good, sample.has_source_time, sample.in_gauss});
+                backend_->samples.emplace(
+                    name,
+                    models::MeasurementSample{
+                        sample.value,
+                        sample.received_at,
+                        sample.source_time,
+                        sample.good,
+                        sample.has_source_time,
+                        sample.in_gauss
+                    }
+                );
             const auto valid = models::validatedMeasurements(settings_snapshot_, backend_->samples);
-            const std::string message = !valid ? valid.error()
+            const auto count = valid ? valid->size() * 3 : 0;
+            const std::string message =
+                !valid ? valid.error()
                 : models::measurementsInGauss(settings_snapshot_, backend_->samples)
-                    ? "36/36 channels: fresh, coherent, in gauss"
-                    : "36/36 channels: preliminary calculation allowed; calibration incomplete (G / mV)";
-            changed = backend_->scientific_status.data_message != message
-                || backend_->scientific_status.data_ready != (static_cast<bool>(valid) && backend_->connected);
+                    ? std::format("{0}/{0} selected channels: fresh, coherent, in gauss", count)
+                    : std::format(
+                          "{0}/{0} selected channels: preliminary calculation; calibration incomplete (G / mV)", count
+                      );
+            changed = backend_->scientific_status.data_message != message ||
+                      backend_->scientific_status.data_ready != (static_cast<bool>(valid) && backend_->connected);
             backend_->scientific_status.data_ready = static_cast<bool>(valid) && backend_->connected;
             backend_->scientific_status.data_message = message;
             status = backend_->scientific_status;
         }
-        if (changed) events_.scientific_status_changed.invoke(status);
+        if (changed)
+            events_.scientific_status_changed.invoke(status);
     });
     backend_->quality_subscription.subscribe(backend_->tpc->field_quality_changed_, [this](auto quality) {
         models::ScientificStatus status;
         {
             std::scoped_lock lock{data_mutex_};
-            backend_->scientific_status.homogeneous = quality.homogeneous && backend_->calculation_calibrated
-                && backend_->calculation_warning.empty() && quality.fit_within_limit && quality.rank == 10;
-            backend_->scientific_status.field_message = !backend_->calculation_calibrated
-                ? std::format("PRELIMINARY: calibration incomplete (G / mV) | rank {} | max residual {:.4g}, RMS {:.4g} | physical accuracy and Br/Bz not verified",
-                    quality.rank, quality.maximum_residual_gauss, quality.rms_residual_gauss)
-                : std::format(
-                "Snapshot: {} | rank {} | max residual {:.4g} G, RMS {:.4g} G | sampled |Br/Bz|={:.5g} | {}",
-                quality.reference_corrected ? "Reference + correction" : "Standalone harmonic approximation",
-                quality.rank, quality.maximum_residual_gauss, quality.rms_residual_gauss, quality.maximum_radial_ratio,
-                !quality.ratio_defined ? "UNDEFINED: Bz too small" : quality.homogeneous ? "Within configured limit" : "HOMOGENEITY LIMIT EXCEEDED");
+            backend_->scientific_status.homogeneous = quality.homogeneous && backend_->calculation_calibrated &&
+                                                      backend_->calculation_warning.empty() &&
+                                                      quality.fit_within_limit && quality.rank == 10;
+            backend_->scientific_status.field_message =
+                !backend_->calculation_calibrated
+                    ? std::format(
+                          "PRELIMINARY: calibration incomplete (G / mV) | rank {} | max residual {:.4g}, RMS {:.4g} | "
+                          "physical accuracy and Br/Bz not verified",
+                          quality.rank,
+                          quality.maximum_residual_gauss,
+                          quality.rms_residual_gauss
+                      )
+                    : std::format(
+                          "Snapshot: {} | rank {} | max residual {:.4g} G, RMS {:.4g} G | sampled |Br/Bz|={:.5g} | {}",
+                          quality.reference_corrected ? "Reference + correction" : "Standalone harmonic approximation",
+                          quality.rank,
+                          quality.maximum_residual_gauss,
+                          quality.rms_residual_gauss,
+                          quality.maximum_radial_ratio,
+                          !quality.ratio_defined ? "UNDEFINED: Bz too small"
+                          : quality.homogeneous  ? "Within configured limit"
+                                                 : "HOMOGENEITY LIMIT EXCEEDED"
+                      );
             if (!backend_->calculation_warning.empty())
                 backend_->scientific_status.field_message += " | WARNING: " + backend_->calculation_warning;
             if (!quality.fit_within_limit)
                 backend_->scientific_status.field_message += " | WARNING: fit residual exceeds configured limit";
             if (quality.rank != 10 || quality.geometry_degenerate)
-                backend_->scientific_status.field_message += " | WARNING: underdetermined geometry; minimum-norm preview, not a verified field";
+                backend_->scientific_status.field_message +=
+                    " | WARNING: underdetermined geometry; minimum-norm preview, not a verified field";
             status = backend_->scientific_status;
         }
         events_.scientific_status_changed.invoke(status);
@@ -345,17 +414,30 @@ void TpcService::startPolling() {
 }
 
 void TpcService::onSettingsChanged(const models::AppSettings& settings) {
+    models::ScientificStatus status;
     std::vector<models::Sensor> sensors;
     sensors.reserve(settings.sensors_info.size());
 
     for (const auto& sensor : settings.sensors_info) {
-        sensors.push_back({.name = sensor.name, .position = {sensor.x, sensor.y, sensor.z}});
+        sensors.push_back({
+            .name = sensor.name, .position = {sensor.x, sensor.y, sensor.z}
+        });
     }
 
     {
         std::scoped_lock lock{data_mutex_};
-        ++settings_revision_;
+        if (settings.runtime_revision && settings.runtime_revision < settings_revision_)
+            return;
+        settings_revision_ = settings.runtime_revision ? settings.runtime_revision : settings_revision_ + 1;
         field_snapshot_valid_ = false;
+        backend_->scientific_status.data_ready = false;
+        backend_->scientific_status.homogeneous = false;
+        backend_->scientific_status.data_message = "Waiting for selected sensor channels";
+        backend_->scientific_status.field_message = "Settings or selection changed; recalculate the field";
+        status = backend_->scientific_status;
+        if (settings.analysis.input_in_gauss != settings_snapshot_.analysis.input_in_gauss ||
+            channelCalibrations(settings) != channelCalibrations(settings_snapshot_))
+            backend_->samples.clear();
         tpc_data_.setSensors(std::move(sensors));
         settings_snapshot_ = settings;
         tpc_data_.setGeometry(settings.geometry.length, settings.geometry.radius);
@@ -365,9 +447,13 @@ void TpcService::onSettingsChanged(const models::AppSettings& settings) {
 
     {
         std::shared_lock backend_lock{backend_mutex_};
-        if (backend_->tpc) backend_->tpc->set_input_in_gauss(settings.analysis.input_in_gauss);
+        std::scoped_lock data_lock{data_mutex_};
+        if (backend_->tpc && settings.runtime_revision == settings_snapshot_.runtime_revision) {
+            backend_->tpc->set_channel_calibrations(channelCalibrations(settings), settings.analysis.input_in_gauss);
+        }
     }
 
+    events_.scientific_status_changed.invoke(status);
     startPolling();
 }
 

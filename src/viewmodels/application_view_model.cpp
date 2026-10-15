@@ -1,10 +1,11 @@
 #include "viewmodels/application_view_model.hpp"
 
+#include <cmath>
+
 #include <algorithm>
 #include <array>
-#include <charconv>
-#include <cmath>
 #include <cctype>
+#include <charconv>
 #include <filesystem>
 #include <format>
 #include <optional>
@@ -59,9 +60,12 @@ namespace {
 template <class Row>
 [[nodiscard]] auto& componentText(Row& row, models::SensorNameComponent component) noexcept {
     switch (component) {
-        case models::SensorNameComponent::R: return row.radial;
-        case models::SensorNameComponent::F: return row.azimuthal;
-        case models::SensorNameComponent::Z: return row.longitudinal;
+        case models::SensorNameComponent::R:
+            return row.radial;
+        case models::SensorNameComponent::F:
+            return row.azimuthal;
+        case models::SensorNameComponent::Z:
+            return row.longitudinal;
     }
     std::unreachable();
 }
@@ -114,7 +118,8 @@ void ApplicationViewModel::disconnect() {
 void ApplicationViewModel::calculateField() {
     {
         std::scoped_lock lock{mutex_};
-        if (main_state_.calculating) return;
+        if (main_state_.calculating)
+            return;
         main_state_.calculating = true;
         calculation_error_.clear();
         main_state_.field_calculated = false;
@@ -138,8 +143,27 @@ void ApplicationViewModel::calculateField() {
 }
 
 void ApplicationViewModel::reloadSettings() {
+    const auto endpoint = context_.settings().currentSettings().connection.endpoint;
     const auto loaded = context_.settings().loadSettings();
+    if (loaded && context_.settings().currentSettings().connection.endpoint != endpoint)
+        context_.tpc().disconnect();
     setStatus(loaded ? "Settings reloaded" : loaded.error(), loaded ? 1 : 2);
+}
+
+void ApplicationViewModel::loadSettings(std::string_view path) {
+    if (path.empty()) {
+        setStatus("Choose a settings JSON file", 2);
+        return;
+    }
+    const auto loaded = context_.settings().loadSettings(std::filesystem::path{path});
+    if (loaded)
+        context_.tpc().disconnect();
+    setStatus(loaded ? "Configuration loaded. Connect to discover available sensors." : loaded.error(), loaded ? 1 : 2);
+}
+
+void ApplicationViewModel::setSensorEnabled(std::string_view name, bool enabled) {
+    const auto changed = context_.settings().setSensorEnabled(name, enabled);
+    setStatus(changed ? "Sensor selection updated; recalculate the field" : changed.error(), changed ? 1 : 2);
 }
 
 void ApplicationViewModel::applySettings(SettingsInput input) {
@@ -149,22 +173,22 @@ void ApplicationViewModel::applySettings(SettingsInput input) {
     const auto nx = parseInt(input.grid_nx);
     const auto ny = parseInt(input.grid_ny);
     const auto nz = parseInt(input.grid_nz);
-    if (!length || !radius || !polling || !nx || !ny || !nz
-        || *length <= 0.0 || *radius <= 0.0 || *polling <= 0
-        || *nx < 2 || *ny < 2 || *nz < 2 || *nx > 1024 || *ny > 1024 || *nz > 1024) {
+    if (!length || !radius || !polling || !nx || !ny || !nz || *length <= 0.0 || *radius <= 0.0 || *polling <= 0 ||
+        *nx < 2 || *ny < 2 || *nz < 2 || *nx > 1024 || *ny > 1024 || *nz > 1024) {
         setStatus("Settings contain invalid values", 2);
         return;
     }
 
     auto& settings = context_.settings();
+    const bool endpoint_changed = settings.currentSettings().connection.endpoint != input.endpoint;
     settings.setConnectionParameters({std::move(input.endpoint), *polling});
     settings.setGeometryParameters({*length, *radius});
-    settings.setGridParameters({
-        static_cast<std::size_t>(*nx),
-        static_cast<std::size_t>(*ny),
-        static_cast<std::size_t>(*nz)
-    });
+    settings.setGridParameters(
+        {static_cast<std::size_t>(*nx), static_cast<std::size_t>(*ny), static_cast<std::size_t>(*nz)}
+    );
     settings.applySettings();
+    if (endpoint_changed)
+        context_.tpc().disconnect();
     setStatus("Settings applied and saved", 1);
 }
 
@@ -177,14 +201,21 @@ void ApplicationViewModel::exportField(std::string_view path_text) {
     setStatus(saved ? "VTK field exported successfully" : "Could not export the VTK field", saved ? 1 : 2);
 }
 
-std::string ApplicationViewModel::inspectField(float x, float y, float width, float height,
-    const std::shared_ptr<const services::RenderedFieldSlice>& displayed_slice) const {
+std::string ApplicationViewModel::inspectField(
+    float x,
+    float y,
+    float width,
+    float height,
+    const std::shared_ptr<const services::RenderedFieldSlice>& displayed_slice
+) const {
     std::scoped_lock lock{mutex_};
-    if (!main_state_.field_calculated || !field_state_.available || field_state_.loading
-        || !displayed_slice || displayed_slice != field_state_.rendered_slice
-        || displayed_slice->axis != field_state_.axis_index || displayed_slice->coordinate != position_) return {};
+    if (!main_state_.field_calculated || !field_state_.available || field_state_.loading || !displayed_slice ||
+        displayed_slice != field_state_.rendered_slice || displayed_slice->axis != field_state_.axis_index ||
+        displayed_slice->coordinate != position_)
+        return {};
     const auto sample = field_state_.rendered_slice->probe(x, y, width, height);
-    if (!sample) return {};
+    if (!sample)
+        return {};
     const auto& p = sample->position_mm;
     const auto& b = sample->cartesian_field;
     const bool preliminary = main_state_.scientific_status.field_message.starts_with("PRELIMINARY");
@@ -197,9 +228,21 @@ std::string ApplicationViewModel::inspectField(float x, float y, float width, fl
         const double bf = (-b[0] * p[1] + b[1] * p[0]) / radius;
         cylindrical = std::format("Br {:+.5f}   Bφ {:+.5f}", br, bf);
     }
-    return std::format("{} · {}\n|B|  {:.5f} {}\nX {:+.2f}   Y {:+.2f}   Z {:+.2f} mm\n{}\nBz {:+.5f} {}\nBx {:+.5f}   By {:+.5f}",
-        preliminary ? "PRELIMINARY" : "Reconstructed field", "grid sample", magnitude, unit,
-        p[0], p[1], p[2], cylindrical, b[2], unit, b[0], b[1]);
+    return std::format(
+        "{} · {}\n|B|  {:.5f} {}\nX {:+.2f}   Y {:+.2f}   Z {:+.2f} mm\n{}\nBz {:+.5f} {}\nBx {:+.5f}   By {:+.5f}",
+        preliminary ? "PRELIMINARY" : "Reconstructed field",
+        "grid sample",
+        magnitude,
+        unit,
+        p[0],
+        p[1],
+        p[2],
+        cylindrical,
+        b[2],
+        unit,
+        b[0],
+        b[1]
+    );
 }
 
 void ApplicationViewModel::selectAxis(int axis) {
@@ -286,7 +329,8 @@ void ApplicationViewModel::bindServiceEvents() {
             main_state_.field_calculated = calculated;
             main_state_.calculating = false;
             main_state_.status_message = calculated ? "Field reconstruction completed; see scientific diagnostics"
-                : calculation_error_.empty() ? "Field calculation failed" : calculation_error_;
+                                         : calculation_error_.empty() ? "Field calculation failed"
+                                                                      : calculation_error_;
             main_state_.status_level = calculated ? (main_state_.scientific_status.homogeneous ? 1 : 2) : 2;
             if (!calculated) {
                 field_state_.loading = false;
@@ -297,13 +341,15 @@ void ApplicationViewModel::bindServiceEvents() {
             field_state_changed.invoke();
         }
     });
-    scientific_subscription_.subscribe(events.scientific_status_changed, [this](const models::ScientificStatus& status) {
-        {
-            std::scoped_lock lock{mutex_};
-            main_state_.scientific_status = status;
+    scientific_subscription_.subscribe(
+        events.scientific_status_changed, [this](const models::ScientificStatus& status) {
+            {
+                std::scoped_lock lock{mutex_};
+                main_state_.scientific_status = status;
+            }
+            main_state_changed.invoke();
         }
-        main_state_changed.invoke();
-    });
+    );
     error_subscription_.subscribe(events.error_occurred, [this](std::string error) {
         {
             std::scoped_lock lock{mutex_};
@@ -315,8 +361,9 @@ void ApplicationViewModel::bindServiceEvents() {
         acceptGeometry(geometry);
     });
     slice_subscription_.subscribe(
-        field_slices.slice_rendered,
-        [this](std::shared_ptr<const services::RenderedFieldSlice> slice) { acceptSlice(std::move(slice)); }
+        field_slices.slice_rendered, [this](std::shared_ptr<const services::RenderedFieldSlice> slice) {
+            acceptSlice(std::move(slice));
+        }
     );
     slice_failure_subscription_.subscribe(field_slices.slice_failed, [this](std::string error) {
         {
@@ -331,6 +378,9 @@ void ApplicationViewModel::bindServiceEvents() {
 void ApplicationViewModel::acceptSettings(const models::AppSettings& settings) {
     {
         std::scoped_lock lock{mutex_};
+        if (settings.runtime_revision && settings.runtime_revision < settings_revision_)
+            return;
+        settings_revision_ = settings.runtime_revision;
         main_state_.tpc_length = std::format("{:g}", settings.geometry.length);
         main_state_.tpc_radius = std::format("{:g}", settings.geometry.radius);
         main_state_.endpoint = settings.connection.endpoint;
@@ -339,11 +389,18 @@ void ApplicationViewModel::acceptSettings(const models::AppSettings& settings) {
         main_state_.grid_ny = std::to_string(settings.grid[1]);
         main_state_.grid_nz = std::to_string(settings.grid[2]);
         main_state_.field_calculated = false;
+        main_state_.settings_path = context_.settings().settingsPath().string();
+        field_state_.available = false;
+        field_state_.loading = false;
+        field_state_.rendered_slice.reset();
+        sensor_configuration_ = settings.sensors_info;
 
         std::vector<models::Sensor> sensors;
         sensors.reserve(settings.sensors_info.size());
         for (const auto& info : settings.sensors_info) {
-            models::Sensor sensor{.name = info.name, .position = {info.x, info.y, info.z}};
+            models::Sensor sensor{
+                .name = info.name, .position = {info.x, info.y, info.z}
+            };
             const auto previous = sensor_indices_.find(sensorKey(info.name));
             if (previous != sensor_indices_.end()) {
                 sensor.values = sensors_[previous->second].values;
@@ -351,6 +408,7 @@ void ApplicationViewModel::acceptSettings(const models::AppSettings& settings) {
             sensors.push_back(sensor);
         }
         sensors_ = std::move(sensors);
+        field_state_.sensors = std::make_shared<const std::vector<models::Sensor>>(sensors_);
         sensor_indices_.clear();
         sensor_indices_.reserve(sensors_.size());
         for (std::size_t index = 0; index < sensors_.size(); ++index) {
@@ -360,6 +418,7 @@ void ApplicationViewModel::acceptSettings(const models::AppSettings& settings) {
     }
     settings_state_changed.invoke();
     main_state_changed.invoke();
+    field_state_changed.invoke();
 }
 
 void ApplicationViewModel::acceptFrame(const models::TpcDataModel::ReceivedFrame& frame) {
@@ -423,8 +482,6 @@ void ApplicationViewModel::acceptSlice(std::shared_ptr<const services::RenderedF
     {
         std::scoped_lock lock{mutex_};
         field_state_.rendered_slice = std::move(slice);
-        field_state_.minimum_value = static_cast<float>(field_state_.rendered_slice->minimum_value);
-        field_state_.maximum_value = static_cast<float>(field_state_.rendered_slice->maximum_value);
         field_state_.loading = false;
     }
     field_state_changed.invoke();
@@ -433,16 +490,26 @@ void ApplicationViewModel::acceptSlice(std::shared_ptr<const services::RenderedF
 void ApplicationViewModel::rebuildSensorRows() {
     auto rows = std::make_shared<std::vector<SensorRowViewState>>();
     rows->reserve(sensors_.size());
-    for (const auto& sensor : sensors_) {
-        rows->push_back({
-            .name = sensor.name.toString(),
-            .radial = std::format("{:.3f}", sensor.values[0]),
-            .azimuthal = std::format("{:.3f}", sensor.values[1]),
-            .longitudinal = std::format("{:.3f}", sensor.values[2]),
-            .coordinate_x = std::format("{:.3f}", sensor.position[0]),
-            .coordinate_y = std::format("{:.3f}", sensor.position[1]),
-            .coordinate_z = std::format("{:.3f}", sensor.position[2])
-        });
+    main_state_.enabled_sensor_count = 0;
+    for (std::size_t index = 0; index < sensors_.size(); ++index) {
+        const auto& sensor = sensors_[index];
+        const auto& configuration = sensor_configuration_[index];
+        main_state_.enabled_sensor_count += configuration.active();
+        rows->push_back(
+            {.name = sensor.name.toString(),
+             .radial = std::format("{:.3f}", sensor.values[0]),
+             .azimuthal = std::format("{:.3f}", sensor.values[1]),
+             .longitudinal = std::format("{:.3f}", sensor.values[2]),
+             .coordinate_x = configuration.position_configured ? std::format("{:.3f}", sensor.position[0]) : "—",
+             .coordinate_y = configuration.position_configured ? std::format("{:.3f}", sensor.position[1]) : "—",
+             .coordinate_z = configuration.position_configured ? std::format("{:.3f}", sensor.position[2]) : "—",
+             .enabled = configuration.active(),
+             .selectable = configuration.selectable(),
+             .status = !configuration.available             ? "Missing R/F/Z"
+                       : !configuration.position_configured ? "Coordinates required"
+                       : configuration.enabled              ? "In reconstruction"
+                                                            : "Excluded by user"}
+        );
     }
     main_state_.sensor_rows = std::move(rows);
 }
@@ -468,9 +535,8 @@ bool ApplicationViewModel::requestSlice() {
         }
         field_state_.loading = true;
         static constexpr std::array<std::string_view, 3> axis_names{"X", "Y", "Z"};
-        field_state_.position_label = std::format(
-            "{} = {:.5g} mm", axis_names[static_cast<std::size_t>(field_state_.axis_index)], position_
-        );
+        field_state_.position_label =
+            std::format("{} = {:.5g} mm", axis_names[static_cast<std::size_t>(field_state_.axis_index)], position_);
         axis = field_state_.axis_index;
         position = position_;
         width = viewport_width_;
@@ -491,7 +557,9 @@ void ApplicationViewModel::setStatus(std::string_view message, int level) {
         main_state_.status_message = message;
         main_state_.status_level = level;
     }
-    context_.events().diagnostic.invoke(level == 2 ? services::LogLevel::Error : services::LogLevel::Info, "ui", message);
+    context_.events().diagnostic.invoke(
+        level == 2 ? services::LogLevel::Error : services::LogLevel::Info, "ui", message
+    );
     main_state_changed.invoke();
 }
 

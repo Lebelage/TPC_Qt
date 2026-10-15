@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "models/application_settings_model.hpp"
-#include "models/tpc_data_model.hpp"
 #include "models/measurement_quality.hpp"
+#include "models/tpc_data_model.hpp"
 #include "services/logging/async_file_logger.hpp"
 #include "tpc/utilities/event_handler.hpp"
 
@@ -27,7 +27,7 @@ public:
 
 public:
     tpc::utilities::event_handler<bool> connection_state_changed;
-    tpc::utilities::event_handler<std::vector<models::SensorName>> initialization_data_received;
+    tpc::utilities::event_handler<std::vector<models::DiscoveredSensor>> initialization_data_received;
     tpc::utilities::event_handler<const models::AppSettings&> settings_changed;
     tpc::utilities::event_handler<const std::unordered_map<std::string, double>&> frame_received;
     tpc::utilities::event_handler<bool> field_was_calculated_;

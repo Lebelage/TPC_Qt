@@ -1,15 +1,59 @@
+import { CheckBox } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 
 export component Panel inherits Rectangle {
     background: Theme.surface;
     border-color: Theme.border;
     border-width: 1px;
-    border-radius: 8px;
+    border-radius: Theme.radius;
 }
 
-export component MutedLabel inherits Text {
+export component BodyText inherits Text {
+    color: Theme.text;
+    font-size: Theme.font-body;
+    font-weight: Theme.weight-normal;
+}
+
+export component CaptionText inherits BodyText {
     color: Theme.text-muted;
-    font-size: 13px;
+    font-size: Theme.font-caption;
+}
+
+export component SectionTitle inherits BodyText {
+    font-size: Theme.font-heading;
+    font-weight: Theme.weight-bold;
+}
+
+export component FormLabel inherits BodyText {
+    color: Theme.text-muted;
+    font-size: Theme.font-label;
+    font-weight: Theme.weight-medium;
+    vertical-alignment: center;
+}
+
+export component SettingsCard inherits Panel {
+    in property <string> title;
+    in property <string> description;
+    VerticalLayout {
+        padding: Theme.padding;
+        spacing: Theme.gap;
+        SectionTitle { text: root.title; }
+        CaptionText { text: root.description; wrap: word-wrap; }
+        @children
+    }
+}
+
+export component PageTitle inherits VerticalLayout {
+    in property <string> title;
+    in property <string> subtitle;
+    spacing: 3px;
+    Text { text: root.title; color: Theme.text; font-size: Theme.font-title; font-weight: Theme.weight-bold; }
+    Text { text: root.subtitle; color: Theme.text-muted; font-size: Theme.font-label; font-weight: Theme.weight-normal; }
+}
+
+export component MutedLabel inherits BodyText {
+    color: Theme.text-muted;
+    font-size: Theme.font-body;
     vertical-alignment: center;
 }
 
@@ -19,25 +63,25 @@ export component AppButton inherits Rectangle {
     in property <bool> active: true;
     callback clicked();
 
-    preferred-width: 84px;
-    height: 34px;
-    border-radius: 6px;
+    preferred-width: max(88px, button-label.preferred-width + 28px);
+    height: Theme.control-height;
+    border-radius: Theme.control-radius;
     border-width: 1px;
     border-color: root.primary ? Theme.accent : Theme.border-strong;
     background: !root.active ? Theme.surface-raised
-        : touch.pressed ? (root.primary ? #416fd5 : #111823)
+        : touch.pressed ? (root.primary ? Theme.accent-pressed : Theme.control-pressed)
         : touch.has-hover ? (root.primary ? Theme.accent-hover : Theme.surface-hover)
         : root.primary ? Theme.accent : Theme.surface-raised;
-    opacity: root.active ? 1 : 0.46;
+
     accessible-role: button;
     accessible-label: root.text;
     accessible-enabled: root.active;
 
-    Text {
+    button-label := Text {
         text: root.text;
-        color: root.primary ? white : Theme.text;
-        font-size: 12px;
-        font-weight: 600;
+        color: !root.active ? Theme.text-subtle : root.primary ? white : Theme.text;
+        font-size: Theme.font-label;
+        font-weight: Theme.weight-medium;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -49,13 +93,37 @@ export component AppButton inherits Rectangle {
     }
 }
 
+export component SensorToggle inherits Rectangle {
+    in property <bool> checked;
+    in property <bool> active: true;
+    in property <string> sensor-name;
+    callback toggled(bool);
+    background: transparent;
+    CheckBox {
+        x: 0px; y: 0px; width: 22px; height: root.height;
+        checked: root.checked;
+        enabled: root.active;
+        accessible-label: "Include " + root.sensor-name + " in reconstruction";
+        toggled => { root.toggled(self.checked); }
+    }
+    Rectangle {
+        x: 28px; y: 0px; width: 36px; height: root.height; background: transparent;
+        Text {
+            text: root.checked ? "ON" : "OFF";
+            color: root.active ? Theme.text : Theme.text-muted;
+            font-size: Theme.font-caption; font-weight: Theme.weight-medium; vertical-alignment: center;
+        }
+        TouchArea { enabled: root.active; mouse-cursor: pointer; clicked => { root.toggled(!root.checked); } }
+    }
+}
+
 export component NavButton inherits Rectangle {
     in property <string> text;
     in property <string> symbol;
     in property <bool> selected: false;
     callback clicked();
 
-    height: 38px;
+    height: 44px;
     border-radius: 7px;
     background: root.selected ? Theme.accent-soft : nav-touch.has-hover ? Theme.surface-hover : transparent;
     accessible-role: button;
@@ -77,7 +145,7 @@ export component NavButton inherits Rectangle {
         Text {
             text: root.symbol;
             color: root.selected ? #a9c2ff : Theme.text-subtle;
-            font-size: 14px;
+            font-size: Theme.font-body;
             width: 19px;
             horizontal-alignment: center;
             vertical-alignment: center;
@@ -85,8 +153,8 @@ export component NavButton inherits Rectangle {
         Text {
             text: root.text;
             color: root.selected ? Theme.text : Theme.text-muted;
-            font-size: 13px;
-            font-weight: root.selected ? 600 : 500;
+            font-size: Theme.font-body;
+            font-weight: Theme.weight-medium;
             vertical-alignment: center;
         }
     }
@@ -100,12 +168,12 @@ export component DarkInput inherits Rectangle {
     in property <bool> active: true;
     callback accepted(string);
 
-    height: 34px;
-    border-radius: 6px;
+    height: Theme.control-height;
+    border-radius: Theme.control-radius;
     border-width: 1px;
     border-color: editor.has-focus ? Theme.accent : Theme.border-strong;
     background: Theme.canvas;
-    opacity: root.active ? 1 : 0.48;
+
 
     if root.text == "": Text {
         x: 12px;
@@ -113,7 +181,7 @@ export component DarkInput inherits Rectangle {
         height: parent.height;
         text: root.placeholder;
         color: Theme.text-subtle;
-        font-size: 13px;
+        font-size: Theme.font-body;
         vertical-alignment: center;
     }
 
@@ -123,7 +191,8 @@ export component DarkInput inherits Rectangle {
         height: parent.height;
         enabled: root.active;
         color: Theme.text;
-        font-size: 13px;
+        font-size: Theme.font-body;
+        font-weight: Theme.weight-normal;
         single-line: true;
         vertical-alignment: center;
         selection-background-color: Theme.accent;
@@ -138,13 +207,13 @@ export component MetricCard inherits Panel {
     in property <string> detail;
     in property <brush> value-color: Theme.text;
 
-    height: 76px;
+    height: 88px;
     VerticalLayout {
-        padding: 11px;
-        spacing: 2px;
-        Text { text: root.label; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
-        Text { text: root.value; color: root.value-color; font-size: 18px; font-weight: 700; }
-        Text { text: root.detail; color: Theme.text-muted; font-size: 10px; }
+        padding: 12px;
+        spacing: 3px;
+        Text { text: root.label; color: Theme.text-muted; font-size: Theme.font-caption; font-weight: Theme.weight-bold; letter-spacing: 0.6px; }
+        Text { text: root.value; color: root.value-color; font-size: Theme.font-metric; font-weight: Theme.weight-bold; }
+        CaptionText { text: root.detail; overflow: elide; }
     }
 }
 
@@ -158,8 +227,9 @@ export component StatusDot inherits Rectangle {
 
 export component TableCell inherits Text {
     color: Theme.text-muted;
-    font-family: "monospace";
-    font-size: 13px;
+    font-family: Theme.mono-family;
+    font-size: Theme.font-body;
+    font-weight: Theme.weight-medium;
     horizontal-alignment: center;
     vertical-alignment: center;
     overflow: elide;
@@ -167,15 +237,15 @@ export component TableCell inherits Text {
 
 export component FieldBadge inherits Rectangle {
     in property <bool> ready;
-    width: ready ? 86px : 104px;
-    height: 24px;
-    border-radius: 12px;
+    width: ready ? 94px : 112px;
+    height: 28px;
+    border-radius: 14px;
     background: ready ? Theme.success-soft : Theme.surface-raised;
     Text {
         text: root.ready ? "READY" : "NOT READY";
         color: root.ready ? Theme.success : Theme.text-subtle;
-        font-size: 10px;
-        font-weight: 700;
+        font-size: Theme.font-caption;
+        font-weight: Theme.weight-bold;
         letter-spacing: 0.7px;
         horizontal-alignment: center;
         vertical-alignment: center;

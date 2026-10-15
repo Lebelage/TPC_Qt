@@ -1,45 +1,12 @@
-import { ListView, Slider, Spinner } from "std-widgets.slint";
+export { FieldWindow, MapTick, MapSensor } from "field-window.slint";
+export { SensorRow } from "sensor-table.slint";
+import { SensorTable, SensorRow } from "sensor-table.slint";
+import { SettingsPage } from "settings-page.slint";
+import { DiagnosticsPanel } from "diagnostics-panel.slint";
 import { Theme } from "theme.slint";
 import {
-    AppButton, DarkInput, FieldBadge, MetricCard, MutedLabel, NavButton, Panel, StatusDot, TableCell
+    AppButton, FieldBadge, MetricCard, NavButton, PageTitle, Panel, StatusDot
 } from "components.slint";
-
-export struct SensorRow {
-    name: string,
-    radial: string,
-    azimuthal: string,
-    longitudinal: string,
-    coordinate-x: string,
-    coordinate-y: string,
-    coordinate-z: string,
-}
-
-component PageTitle inherits VerticalLayout {
-    in property <string> title;
-    in property <string> subtitle;
-    spacing: 1px;
-    Text { text: root.title; color: Theme.text; font-size: 20px; font-weight: 700; }
-    Text { text: root.subtitle; color: Theme.text-muted; font-size: 12px; }
-}
-
-component FormLabel inherits Text {
-    color: Theme.text-muted;
-    font-size: 12px;
-    font-weight: 600;
-    vertical-alignment: center;
-}
-
-component SettingsCard inherits Panel {
-    in property <string> title;
-    in property <string> description;
-    VerticalLayout {
-        padding: 15px;
-        spacing: 10px;
-        Text { text: root.title; color: Theme.text; font-size: 15px; font-weight: 700; }
-        Text { text: root.description; color: Theme.text-subtle; font-size: 12px; wrap: word-wrap; }
-        @children
-    }
-}
 
 export component MainWindow inherits Window {
     title: "TPC Field Console";
@@ -48,14 +15,19 @@ export component MainWindow inherits Window {
     min-width: 860px;
     min-height: 560px;
     background: Theme.canvas;
-    default-font-family: "Inter";
+    default-font-family: Theme.font-family;
+    default-font-size: Theme.font-body;
 
     in property <[SensorRow]> sensor-rows;
     in-out property <int> current-tab: 0;
     in property <bool> connected: false;
     in property <bool> field-calculated: false;
     in property <bool> calculating: false;
-    in property <string> data-quality: "Waiting for 36 fresh channels";
+    in property <int> enabled-sensor-count: 0;
+    in-out property <string> settings-path;
+    in property <string> active-settings-path;
+    in property <string> settings-file-name;
+    in property <string> data-quality: "Waiting for selected sensor channels";
     in property <string> field-quality: "No verified reconstruction";
     in property <bool> homogeneous: false;
     in-out property <string> tpc-length: "4058";
@@ -74,19 +46,22 @@ export component MainWindow inherits Window {
     callback visualize-field();
     callback save-field();
     callback load-settings();
+    callback browse-settings();
+    callback load-settings-file(string);
+    callback sensor-toggled(string, bool);
     callback apply-settings(string, string, string, string, string, string, string);
 
     HorizontalLayout {
         spacing: 0px;
 
         Rectangle {
-            width: 184px;
+            width: 200px;
             background: Theme.sidebar;
             border-color: Theme.border;
             border-width: 1px;
 
             VerticalLayout {
-                padding: 12px;
+                padding: 14px;
                 spacing: 6px;
 
                 HorizontalLayout {
@@ -100,27 +75,27 @@ export component MainWindow inherits Window {
                         Text {
                             text: "B";
                             color: white;
-                            font-size: 16px;
-                            font-weight: 800;
+                            font-size: Theme.font-heading;
+                            font-weight: Theme.weight-bold;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                         }
                     }
                     VerticalLayout {
                         spacing: 0px;
-                        Text { text: "TPC"; color: Theme.text; font-size: 15px; font-weight: 800; vertical-alignment: bottom; }
-                        Text { text: "FIELD CONSOLE"; color: Theme.text-subtle; font-size: 8px; font-weight: 700; letter-spacing: 0.8px; vertical-alignment: top; }
+                        Text { text: "TPC"; color: Theme.text; font-size: Theme.font-heading; font-weight: Theme.weight-bold; vertical-alignment: bottom; }
+                        Text { text: "FIELD CONSOLE"; color: Theme.text-subtle; font-size: Theme.font-small; font-weight: Theme.weight-bold; letter-spacing: 0.4px; vertical-alignment: top; }
                     }
                 }
 
-                Text { text: "NAVIGATION"; color: Theme.text-subtle; font-size: 8px; font-weight: 700; letter-spacing: 0.8px; height: 20px; vertical-alignment: bottom; }
+                Text { text: "NAVIGATION"; color: Theme.text-subtle; font-size: Theme.font-small; font-weight: Theme.weight-bold; letter-spacing: 0.4px; height: 20px; vertical-alignment: bottom; }
                 NavButton { text: "Workspace"; symbol: "◎"; selected: root.current-tab == 0; clicked => { root.current-tab = 0; } }
                 NavButton { text: "Settings"; symbol: "⌁"; selected: root.current-tab == 1; clicked => { root.current-tab = 1; } }
 
                 Rectangle { vertical-stretch: 1; background: transparent; }
 
                 Panel {
-                    height: 96px;
+                    height: 128px;
                     VerticalLayout {
                         padding: 10px;
                         spacing: 7px;
@@ -135,19 +110,19 @@ export component MainWindow inherits Window {
                             Text {
                                 text: root.connected ? "TPC online" : "TPC offline";
                                 color: root.connected ? Theme.success : Theme.text-muted;
-                                font-size: 11px;
-                                font-weight: 650;
+                                font-size: Theme.font-label;
+                                font-weight: Theme.weight-medium;
                                 vertical-alignment: center;
                             }
                         }
                         Text {
                             text: root.connected ? "Receiving live sensor data" : "No active OPC UA session";
                             color: Theme.text-subtle;
-                            font-size: 9px;
+                            font-size: Theme.font-caption;
                             wrap: word-wrap;
                         }
                         AppButton {
-                            height: 30px;
+                            height: Theme.control-height;
                             text: root.connected ? "Disconnect" : "Connect";
                             primary: !root.connected;
                             clicked => {
@@ -165,18 +140,18 @@ export component MainWindow inherits Window {
             background: Theme.canvas;
 
             if root.current-tab == 0: VerticalLayout {
-                padding: 18px;
-                spacing: 12px;
+                padding: Theme.padding;
+                spacing: 10px;
 
                 HorizontalLayout {
-                    height: 46px;
+                    height: 52px;
                     PageTitle {
                         title: "Sensor workspace";
                         subtitle: "Live magnetic field components and sensor geometry";
                         horizontal-stretch: 1;
                     }
                     Rectangle {
-                        width: 104px;
+                        width: 112px;
                         background: transparent;
                         FieldBadge {
                             x: (parent.width - self.width) / 2;
@@ -187,13 +162,13 @@ export component MainWindow inherits Window {
                 }
 
                 HorizontalLayout {
-                    height: 76px;
+                    height: 88px;
                     spacing: 10px;
                     MetricCard {
                         horizontal-stretch: 1;
                         label: "SENSORS";
-                        value: root.sensor-rows.length;
-                        detail: "Configured measurement points";
+                        value: root.enabled-sensor-count + " / " + root.sensor-rows.length;
+                        detail: "Used / configured";
                         value-color: Theme.accent-hover;
                     }
                     MetricCard {
@@ -207,409 +182,53 @@ export component MainWindow inherits Window {
                         horizontal-stretch: 1;
                         label: "FIELD MODEL";
                         value: root.field-calculated ? "Ready" : "Pending";
-                        detail: root.field-calculated ? "Slice visualization available" : "Run a field calculation";
+                        detail: root.field-calculated ? "Slices available" : "Run a field calculation";
                         value-color: root.field-calculated ? Theme.success : Theme.warning;
                     }
                 }
 
-                Panel {
+                SensorTable {
                     vertical-stretch: 1;
-                    clip: true;
-                    VerticalLayout {
-                        spacing: 0px;
-
-                        Rectangle {
-                            height: 54px;
-                            background: Theme.surface-raised;
-                            VerticalLayout {
-                                spacing: 2px;
-                                HorizontalLayout {
-                                    padding-left: 12px;
-                                    padding-right: 12px;
-                                    spacing: 4px;
-                                    Text { text: "SENSOR"; width: 92px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; vertical-alignment: center; }
-                                    Text { text: "CHANNEL VALUES, G / mV"; width: 336px; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
-                                    Text { text: "COORDINATES, MM"; horizontal-stretch: 1; color: Theme.text-subtle; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; horizontal-alignment: center; vertical-alignment: center; }
-                                }
-                                HorizontalLayout {
-                                    padding-left: 12px;
-                                    padding-right: 12px;
-                                    spacing: 4px;
-                                    Text { text: "ID"; width: 92px; color: Theme.text-muted; font-size: 11px; }
-                                    Text { text: "R"; width: 108px; color: Theme.text-muted; font-size: 11px; horizontal-alignment: center; }
-                                    Text { text: "F"; width: 108px; color: Theme.text-muted; font-size: 11px; horizontal-alignment: center; }
-                                    Text { text: "Z"; width: 108px; color: Theme.text-muted; font-size: 11px; horizontal-alignment: center; }
-                                    Text { text: "X"; horizontal-stretch: 1; color: Theme.text-muted; font-size: 11px; horizontal-alignment: center; }
-                                    Text { text: "Y"; horizontal-stretch: 1; color: Theme.text-muted; font-size: 11px; horizontal-alignment: center; }
-                                    Text { text: "Z"; horizontal-stretch: 1; color: Theme.text-muted; font-size: 11px; horizontal-alignment: center; }
-                                }
-                            }
-                        }
-
-                        ListView {
-                            vertical-stretch: 1;
-                            for row[index] in root.sensor-rows: Rectangle {
-                                height: 40px;
-                                background: row-touch.has-hover ? Theme.surface-hover
-                                    : mod(index, 2) == 0 ? Theme.surface : #111924;
-                                border-color: Theme.border;
-                                border-width: 1px;
-                                HorizontalLayout {
-                                    padding-left: 12px;
-                                    padding-right: 12px;
-                                    spacing: 4px;
-                                    Text { text: row.name; width: 92px; color: Theme.text; font-size: 13px; font-weight: 700; vertical-alignment: center; }
-                                    TableCell { text: row.radial; width: 108px; color: #81aaff; }
-                                    TableCell { text: row.azimuthal; width: 108px; color: #81aaff; }
-                                    TableCell { text: row.longitudinal; width: 108px; color: #81aaff; }
-                                    TableCell { text: row.coordinate-x; horizontal-stretch: 1; }
-                                    TableCell { text: row.coordinate-y; horizontal-stretch: 1; }
-                                    TableCell { text: row.coordinate-z; horizontal-stretch: 1; }
-                                }
-                                row-touch := TouchArea { mouse-cursor: default; }
-                            }
-                        }
-
-                        if root.sensor-rows.length == 0: Rectangle {
-                            vertical-stretch: 1;
-                            background: transparent;
-                            VerticalLayout {
-                                alignment: center;
-                                spacing: 6px;
-                                Text { text: "No sensors discovered"; color: Theme.text; font-size: 15px; font-weight: 600; horizontal-alignment: center; }
-                                Text { text: "Connect to the TPC endpoint to load measurement points"; color: Theme.text-muted; font-size: 12px; horizontal-alignment: center; }
-                            }
-                        }
-                    }
+                    rows: root.sensor-rows;
+                    busy: root.calculating;
+                    sensor-toggled(name, enabled) => { root.sensor-toggled(name, enabled); }
                 }
 
                 HorizontalLayout {
-                    height: 36px;
+                    height: Theme.control-height;
                     spacing: 8px;
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        background: transparent;
-                        HorizontalLayout {
-                            y: (parent.height - self.height) / 2;
-                            height: 18px;
-                            spacing: 7px;
-                            Rectangle {
-                                width: 7px;
-                                background: transparent;
-                                Rectangle {
-                                    y: (parent.height - self.height) / 2;
-                                    width: 7px; height: 7px; border-radius: 4px;
-                                    background: root.status-level == 2 ? Theme.danger
-                                        : root.status-level == 1 ? Theme.success : Theme.text-subtle;
-                                }
-                            }
-                            Text { text: root.status-message; color: Theme.text-muted; font-size: 11px; vertical-alignment: center; }
-                        }
-                    }
+                    Rectangle { horizontal-stretch: 1; background: transparent; }
                     AppButton { text: "Export VTK"; active: root.field-calculated; clicked => { root.save-field(); } }
                     AppButton { text: "Open slices"; active: root.field-calculated; clicked => { root.visualize-field(); } }
                     AppButton { text: root.calculating ? "Calculating…" : "Calculate field"; active: !root.calculating; primary: true; clicked => { root.calculate-field(); } }
                 }
-                Text { text: root.data-quality; color: Theme.text-muted; font-size: 11px; wrap: word-wrap; }
-                Text { text: root.field-quality; color: root.homogeneous ? Theme.success : Theme.warning; font-size: 11px; wrap: word-wrap; }
-            }
-
-            if root.current-tab == 1: VerticalLayout {
-                padding: 18px;
-                spacing: 12px;
-
-                PageTitle {
-                    height: 46px;
-                    title: "System settings";
-                    subtitle: "Geometry, data acquisition and calculation grid";
-                }
-
-                HorizontalLayout {
-                    vertical-stretch: 1;
-                    spacing: 12px;
-
-                    VerticalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 12px;
-                        SettingsCard {
-                            height: 208px;
-                            title: "TPC geometry";
-                            description: "Physical dimensions used for reconstruction and slice bounds.";
-                            FormLabel { text: "Length, mm"; }
-                            DarkInput { text <=> root.tpc-length; }
-                            FormLabel { text: "Radius, mm"; }
-                            DarkInput { text <=> root.tpc-radius; }
-                        }
-                        SettingsCard {
-                            height: 172px;
-                            title: "Calculation grid";
-                            description: "Sampling resolution along each Cartesian axis.";
-                            HorizontalLayout {
-                                spacing: 10px;
-                                VerticalLayout { spacing: 6px; FormLabel { text: "Nx"; } DarkInput { text <=> root.grid-nx; } }
-                                VerticalLayout { spacing: 6px; FormLabel { text: "Ny"; } DarkInput { text <=> root.grid-ny; } }
-                                VerticalLayout { spacing: 6px; FormLabel { text: "Nz"; } DarkInput { text <=> root.grid-nz; } }
-                            }
-                        }
-                        Rectangle { vertical-stretch: 1; background: transparent; }
-                    }
-
-                    VerticalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 12px;
-                        SettingsCard {
-                            height: 208px;
-                            title: "OPC UA connection";
-                            description: "Endpoint and sensor polling cadence.";
-                            FormLabel { text: "Endpoint URL"; }
-                            DarkInput { text <=> root.endpoint; placeholder: "opc.tcp://127.0.0.1:4840"; }
-                            FormLabel { text: "Polling interval, ms"; }
-                            DarkInput { text <=> root.polling-interval; }
-                        }
-                        Panel {
-                            height: 124px;
-                            VerticalLayout {
-                                padding: 15px;
-                                spacing: 7px;
-                                Text { text: "Configuration file"; color: Theme.text; font-size: 15px; font-weight: 700; }
-                                Text { text: "Settings are validated and saved in the platform configuration directory."; color: Theme.text-subtle; font-size: 12px; wrap: word-wrap; }
-                                HorizontalLayout {
-                                    spacing: 10px;
-                                    AppButton { text: "Reload"; clicked => { root.load-settings(); } }
-                                    AppButton {
-                                        text: "Apply changes";
-                                        primary: true;
-                                        horizontal-stretch: 1;
-                                        clicked => {
-                                            root.apply-settings(root.tpc-length, root.tpc-radius, root.endpoint,
-                                                root.polling-interval, root.grid-nx, root.grid-ny, root.grid-nz);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Rectangle { vertical-stretch: 1; background: transparent; }
-                    }
+                DiagnosticsPanel {
+                    message: root.status-message;
+                    level: root.status-level;
+                    data-quality: root.data-quality;
+                    field-quality: root.field-quality;
+                    homogeneous: root.homogeneous;
                 }
             }
-        }
-    }
-}
 
-export component FieldWindow inherits Window {
-    title: "TPC Field Slices";
-    preferred-width: 900px;
-    preferred-height: 660px;
-    min-width: 680px;
-    min-height: 520px;
-    background: Theme.canvas;
-    default-font-family: "Inter";
-
-    in property <bool> available: false;
-    in property <bool> loading: false;
-    in property <image> slice-image;
-    in-out property <int> axis-index: 2;
-    in-out property <float> slice-position: 0;
-    in-out property <string> position-input: "0";
-    in property <float> minimum-position: 0;
-    in property <float> maximum-position: 0;
-    in property <float> minimum-value: 0;
-    in property <float> maximum-value: 0;
-    in property <string> position-label: "—";
-    in-out property <string> probe-text: "";
-
-    callback axis-changed(int);
-    callback position-changed(float);
-    callback position-entered(string);
-    callback calculate-field();
-    callback viewport-changed(float, float);
-    callback inspect-field(float, float, float, float) -> string;
-
-    VerticalLayout {
-        padding: 18px;
-        spacing: 12px;
-
-        HorizontalLayout {
-            height: 46px;
-            spacing: 8px;
-            PageTitle {
-                title: "Field slice";
-                subtitle: "Direct-basis reconstruction · double precision";
-                horizontal-stretch: 1;
-            }
-            Rectangle {
-                width: 124px;
-                background: transparent;
-                AppButton {
-                    y: (parent.height - self.height) / 2;
-                    width: parent.width;
-                    text: "Recalculate";
-                    active: !root.loading;
-                    clicked => { root.calculate-field(); }
-                }
-            }
-            Rectangle {
-                width: 104px;
-                background: transparent;
-                FieldBadge {
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                    ready: root.available;
-                }
-            }
-        }
-
-        Panel {
-            height: 50px;
-            HorizontalLayout {
-                padding: 8px;
-                spacing: 8px;
-                MutedLabel { text: "Slice plane"; width: 80px; }
-                AppButton { width: 48px; text: "X"; primary: root.axis-index == 0; clicked => { root.axis-index = 0; root.axis-changed(0); } }
-                AppButton { width: 48px; text: "Y"; primary: root.axis-index == 1; clicked => { root.axis-index = 1; root.axis-changed(1); } }
-                AppButton { width: 48px; text: "Z"; primary: root.axis-index == 2; clicked => { root.axis-index = 2; root.axis-changed(2); } }
-                Rectangle { horizontal-stretch: 1; background: transparent; }
-                Text { text: root.position-label; color: Theme.text; font-family: "monospace"; font-size: 13px; vertical-alignment: center; }
-            }
-        }
-
-        Panel {
-            vertical-stretch: 1;
-            clip: true;
-            Rectangle {
-                x: 14px; y: 14px; width: parent.width - 28px; height: parent.height - 28px;
-                background: #080b11;
-                border-radius: 8px;
-                image-area := Image {
-                    x: 12px; y: 12px; width: parent.width - 24px; height: parent.height - 24px;
-                    source: root.slice-image;
-                    image-fit: contain;
-                    init => { root.viewport-changed(self.width / 1px, self.height / 1px); }
-                }
-                field-pointer := TouchArea {
-                    x: image-area.x; y: image-area.y;
-                    width: image-area.width; height: image-area.height;
-                    pointer-event(event) => {
-                        if event.kind == PointerEventKind.move {
-                            root.probe-text = root.available && !root.loading
-                                ? root.inspect-field(self.mouse-x / 1px, self.mouse-y / 1px,
-                                    self.width / 1px, self.height / 1px) : "";
-                        }
-                    }
-                }
-                if field-pointer.has-hover && root.available && !root.loading && root.probe-text != "": Rectangle {
-                    // A compact readout away from the selected point; no full-span crosshair.
-                    x: max(6px, min(parent.width - self.width - 6px,
-                        field-pointer.x + field-pointer.mouse-x + 18px + self.width > parent.width - 6px
-                            ? field-pointer.x + field-pointer.mouse-x - self.width - 18px
-                            : field-pointer.x + field-pointer.mouse-x + 18px));
-                    y: max(6px, min(parent.height - self.height - 6px,
-                        field-pointer.y + field-pointer.mouse-y + 18px + self.height > parent.height - 6px
-                            ? field-pointer.y + field-pointer.mouse-y - self.height - 18px
-                            : field-pointer.y + field-pointer.mouse-y + 18px));
-                    width: min(386px, parent.width - 12px);
-                    height: 126px;
-                    background: #111923f2;
-                    border-color: #3c4858;
-                    border-width: 1px;
-                    border-radius: 5px;
-                    Text {
-                        x: 12px; y: 10px;
-                        width: parent.width - 24px; height: parent.height - 20px;
-                        text: root.probe-text;
-                        color: #d3dce6;
-                        font-family: "monospace";
-                        font-size: 11px;
-                        vertical-alignment: center;
-                    }
-                }
-                if root.loading: Spinner { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; }
-                if !root.available: VerticalLayout {
-                    alignment: center;
-                    spacing: 7px;
-                    Text { text: "No field data"; color: Theme.text; font-size: 16px; font-weight: 650; horizontal-alignment: center; }
-                    Text { text: "Calculate the field in the workspace to inspect slices"; color: Theme.text-muted; font-size: 12px; horizontal-alignment: center; }
-                }
-            }
-        }
-
-        Panel {
-            height: 100px;
-            VerticalLayout {
-                padding: 12px;
-                spacing: 8px;
-                HorizontalLayout {
-                    height: 34px;
-                    spacing: 8px;
-                    Text {
-                        width: 54px;
-                        text: root.minimum-position;
-                        color: Theme.text-muted;
-                        font-family: "monospace";
-                        font-size: 11px;
-                        horizontal-alignment: right;
-                        vertical-alignment: center;
-                    }
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        background: transparent;
-                        Slider {
-                            y: (parent.height - self.height) / 2;
-                            width: parent.width;
-                            height: 22px;
-                            minimum: root.minimum-position;
-                            maximum: root.maximum-position;
-                            value <=> root.slice-position;
-                            enabled: root.available && root.maximum-position > root.minimum-position;
-                            changed => { root.position-changed(self.value); }
-                        }
-                    }
-                    Text {
-                        width: 70px;
-                        text: root.maximum-position + " mm";
-                        color: Theme.text-muted;
-                        font-family: "monospace";
-                        font-size: 11px;
-                        vertical-alignment: center;
-                    }
-                    DarkInput {
-                        width: 82px;
-                        text <=> root.position-input;
-                        active: root.available;
-                        placeholder: "0";
-                        accepted(value) => { root.position-entered(value); }
-                    }
-                    AppButton {
-                        width: 48px;
-                        text: "Go";
-                        active: root.available;
-                        clicked => { root.position-entered(root.position-input); }
-                    }
-                }
-                HorizontalLayout {
-                    height: 34px;
-                    spacing: 12px;
-                    Rectangle {
-                        width: 210px;
-                        background: transparent;
-                        Rectangle {
-                            y: (parent.height - self.height) / 2;
-                            width: parent.width;
-                            height: 10px;
-                            border-radius: 5px;
-                            background: @linear-gradient(90deg, #440154 0%, #414487 20%, #2a788e 40%, #22a884 60%, #7ad151 80%, #fde725 100%);
-                        }
-                    }
-                    Text { text: "|B|"; color: Theme.text-subtle; font-size: 11px; vertical-alignment: center; }
-                    Text {
-                        text: root.minimum-value + "  —  " + root.maximum-value + " G";
-                        color: Theme.text-muted;
-                        font-family: "monospace";
-                        font-size: 11px;
-                        horizontal-stretch: 1;
-                        vertical-alignment: center;
-                    }
-                    Text { text: "10 induction bands"; color: Theme.text-subtle; font-size: 11px; vertical-alignment: center; }
+            if root.current-tab == 1: SettingsPage {
+                tpc-length <=> root.tpc-length;
+                tpc-radius <=> root.tpc-radius;
+                endpoint <=> root.endpoint;
+                polling-interval <=> root.polling-interval;
+                grid-nx <=> root.grid-nx;
+                grid-ny <=> root.grid-ny;
+                grid-nz <=> root.grid-nz;
+                settings-path <=> root.settings-path;
+                active-settings-path: root.active-settings-path;
+                settings-file-name: root.settings-file-name;
+                busy: root.calculating;
+                reload => { root.load-settings(); }
+                browse => { root.browse-settings(); }
+                load-file(path) => { root.load-settings-file(path); }
+                apply => {
+                    root.apply-settings(root.tpc-length, root.tpc-radius, root.endpoint,
+                        root.polling-interval, root.grid-nx, root.grid-ny, root.grid-nz);
                 }
             }
         }

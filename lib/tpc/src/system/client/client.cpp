@@ -166,9 +166,10 @@ auto Client::initialize_opcua_handlers() -> std::expected<void, std::string> {
         return std::unexpected("Client is not initialized");
 
     client_->onSessionActivated([this] {
+        // Publish session availability before discovery can complete inline.
+        on_opcua_session_activated();
         if (auto result = initialize_monitored_items(); !result)
             error_occurred_.invoke(result.error());
-        on_opcua_session_activated();
     });
     client_->onConnected([this] {
         on_opcua_connected();

@@ -25,7 +25,7 @@ end
 
 includes("third_party")
 
--- Project libraries. SDK and UI dependencies belong only to the desktop target.
+-- Toolkit-independent libraries shared by the desktop application and tests.
 target("tpc")
     set_kind("static")
     add_files("lib/tpc/src/**.cpp")
@@ -36,21 +36,22 @@ target_end()
 
 target("tpc_app")
     set_kind("static")
-    add_files("src/application/*.cpp", "src/services/**.cpp")
+    add_files("src/application/*.cpp", "src/services/**.cpp", "src/viewmodels/*.cpp")
     add_includedirs("src", {public = true})
     add_deps("tpc", {public = true})
     add_packages("nlohmann_json", {public = true})
 target_end()
 
 if has_config("app") then
+    local ui_style = "fluent-dark"
     includes("xmake/slint.lua")
     add_requires("slint 1.18.1", {system = false})
     target("TPC_Slint")
         set_kind("binary")
         add_deps("tpc_app")
         add_packages("slint")
-        add_files("src/main.cpp", "src/ui/application_view_binding.cpp", "src/viewmodels/*.cpp")
-        add_rules("slint", {ui = "ui/app.slint", style = "fluent", bundle_identifier = "org.tpc.controller"})
+        add_files("src/main.cpp", "src/ui/application_view_binding.cpp")
+        add_rules("slint", {ui = "ui/app.slint", style = ui_style, bundle_identifier = "org.tpc.controller"})
         if is_plat("macosx") then
             add_files("src/ui/file_dialog_macos.mm")
             add_frameworks("AppKit", "UniformTypeIdentifiers")
@@ -62,11 +63,22 @@ if has_config("app") then
             add_files("src/ui/file_dialog_fallback.cpp")
         end
     target_end()
+
+    target("tpc_field_map_ui_tests")
+        set_kind("binary")
+        set_default(false)
+        add_deps("tpc_app")
+        add_packages("slint")
+        add_files("tests/field_map_ui_tests.cpp", "src/ui/application_view_binding.cpp", "src/ui/file_dialog_fallback.cpp")
+        add_rules("slint", {ui = "ui/app.slint", style = ui_style})
+        add_tests("interaction")
+    target_end()
 end
 
 for name, source in pairs({
     tpc_scientific_tests = "tests/scientific_tests.cpp",
     tpc_logging_tests = "tests/logging_tests.cpp",
+    tpc_sensor_configuration_tests = "tests/sensor_configuration_tests.cpp",
     tpc_test_frame = "lib/tpc/tests/test_frame.cpp"
 }) do
     target(name)

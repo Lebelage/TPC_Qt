@@ -1,0 +1,106 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { AppButton, CaptionText, DarkInput, FormLabel, PageTitle, SettingsCard } from "components.slint";
+
+export component SettingsPage inherits Rectangle {
+    in-out property <string> tpc-length;
+    in-out property <string> tpc-radius;
+    in-out property <string> endpoint;
+    in-out property <string> polling-interval;
+    in-out property <string> grid-nx;
+    in-out property <string> grid-ny;
+    in-out property <string> grid-nz;
+    in-out property <string> settings-path;
+    in property <string> active-settings-path;
+    in property <string> settings-file-name;
+    in property <bool> busy;
+    callback reload();
+    callback browse();
+    callback load-file(string);
+    callback apply();
+    background: transparent;
+
+    VerticalLayout {
+        padding: Theme.padding;
+        spacing: Theme.gap;
+        PageTitle {
+            height: 52px;
+            title: "System settings";
+            subtitle: "Geometry, acquisition and reconstruction profiles";
+        }
+        settings-scroll := ScrollView {
+            vertical-stretch: 1;
+            content-width: self.visible-width;
+            horizontal-scrollbar-policy: always-off;
+            columns := HorizontalLayout {
+                width: settings-scroll.visible-width;
+                height: 560px;
+                spacing: Theme.gap;
+                VerticalLayout {
+                    width: (columns.width - Theme.gap) / 2;
+                    spacing: Theme.gap;
+                    SettingsCard {
+                        height: 260px;
+                        title: "TPC geometry";
+                        description: "Measured dimensions for reconstruction and slice bounds.";
+                        FormLabel { text: "Length · mm"; }
+                        DarkInput { text <=> root.tpc-length; }
+                        FormLabel { text: "Radius · mm"; }
+                        DarkInput { text <=> root.tpc-radius; }
+                    }
+                    SettingsCard {
+                        height: 196px;
+                        title: "Calculation grid";
+                        description: "Sampling resolution along each Cartesian axis.";
+                        HorizontalLayout {
+                            spacing: Theme.gap;
+                            VerticalLayout { spacing: 8px; FormLabel { text: "Nx"; } DarkInput { text <=> root.grid-nx; } }
+                            VerticalLayout { spacing: 8px; FormLabel { text: "Ny"; } DarkInput { text <=> root.grid-ny; } }
+                            VerticalLayout { spacing: 8px; FormLabel { text: "Nz"; } DarkInput { text <=> root.grid-nz; } }
+                        }
+                    }
+                    Rectangle { vertical-stretch: 1; background: transparent; }
+                }
+                VerticalLayout {
+                    width: (columns.width - Theme.gap) / 2;
+                    spacing: Theme.gap;
+                    SettingsCard {
+                        height: 260px;
+                        title: "OPC UA connection";
+                        description: "Server endpoint and sensor polling cadence.";
+                        FormLabel { text: "Endpoint URL"; }
+                        DarkInput { text <=> root.endpoint; placeholder: "opc.tcp://127.0.0.1:4840"; }
+                        FormLabel { text: "Polling interval · ms"; }
+                        DarkInput { text <=> root.polling-interval; }
+                    }
+                    SettingsCard {
+                        height: 288px;
+                        title: "Configuration file";
+                        description: "Load a JSON profile or save changes to the active file.";
+                        CaptionText {
+                            text: "Active: " + root.settings-file-name;
+                            accessible-label: "Active configuration: " + root.active-settings-path;
+                            overflow: elide;
+                        }
+                        DarkInput {
+                            text <=> root.settings-path;
+                            placeholder: "/path/to/settings.json";
+                            accepted(value) => { root.load-file(value); }
+                        }
+                        HorizontalLayout {
+                            spacing: Theme.gap;
+                            AppButton { text: "Open…"; active: !root.busy; clicked => { root.browse(); } }
+                            AppButton { text: "Load file"; active: !root.busy; clicked => { root.load-file(root.settings-path); } }
+                            Rectangle { horizontal-stretch: 1; background: transparent; }
+                        }
+                        HorizontalLayout {
+                            spacing: Theme.gap;
+                            AppButton { text: "Reload"; active: !root.busy; clicked => { root.reload(); } }
+                            AppButton { text: "Apply changes"; primary: true; active: !root.busy; horizontal-stretch: 1; clicked => { root.apply(); } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

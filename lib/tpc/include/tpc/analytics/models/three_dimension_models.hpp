@@ -19,6 +19,7 @@ namespace tpc::analytics::models {
 enum class CoordinateType { Cartesian, Cylindric };
 
 enum class SliceDirection { X, Y, Z };
+enum class SliceFraming { Tight, FullVolume };
 
 struct PointComponents {
     std::array<double, core::definitions::DIMENSION> components;

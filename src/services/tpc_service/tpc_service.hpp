@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <expected>
 #include <memory>
 #include <mutex>
-#include <expected>
 #include <shared_mutex>
 #include <stop_token>
 #include <string>
@@ -40,10 +40,7 @@ public:
 
     [[nodiscard]] std::expected<void, std::string> calculateField();
     [[nodiscard]] std::expected<models::NumericFieldSlice, std::string> calculateFieldSlice(
-        int axis,
-        double coordinate,
-        std::array<std::size_t, 2> grid,
-        std::stop_token stop_token = {}
+        int axis, double coordinate, std::array<std::size_t, 2> grid, std::stop_token stop_token = {}
     );
     [[nodiscard]] bool exportFieldToVtk(std::string_view file_path);
 

@@ -1,18 +1,21 @@
 #pragma once
 
-#include <memory>
-#include <vector>
 #include <slint.h>
 
+#include <memory>
+#include <vector>
+
 #include "app.h"
+#include "models/tpc_data_model.hpp"
 #include "services/scoped_subscription.hpp"
+#include "viewmodels/field_map_overlay.hpp"
 
 namespace tpc_slint::viewmodels {
 class ApplicationViewModel;
 struct MainWindowViewState;
 struct FieldWindowViewState;
 struct SensorRowViewState;
-}
+}  // namespace tpc_slint::viewmodels
 
 namespace tpc_slint::services {
 struct RenderedFieldSlice;
@@ -38,6 +41,9 @@ private:
     void renderMain(const viewmodels::MainWindowViewState& state);
     void renderSettings(const viewmodels::MainWindowViewState& state);
     void renderField(const viewmodels::FieldWindowViewState& state);
+    void renderSlice();
+    void renderGrid();
+    void renderSensors();
 
     viewmodels::ApplicationViewModel& view_model_;
     slint::ComponentHandle<MainWindow> main_window_;
@@ -45,6 +51,8 @@ private:
     std::shared_ptr<slint::VectorModel<SensorRow>> sensor_model_;
     std::shared_ptr<const std::vector<viewmodels::SensorRowViewState>> rendered_rows_;
     std::shared_ptr<const services::RenderedFieldSlice> rendered_slice_;
+    std::shared_ptr<const std::vector<models::Sensor>> rendered_sensors_;
+    viewmodels::FieldViewport field_viewport_;
     services::ScopedSubscription<> main_state_subscription_;
     services::ScopedSubscription<> settings_state_subscription_;
     services::ScopedSubscription<> field_state_subscription_;

@@ -1,15 +1,38 @@
 export global Theme {
+    out property <string> font-family: "Inter";
+    out property <string> mono-family: "monospace";
+    out property <length> font-small: 12px;
+    out property <length> font-caption: 13px;
+    out property <length> font-label: 14px;
+    out property <length> font-body: 15px;
+    out property <length> font-heading: 17px;
+    out property <length> font-readout: 16px;
+    out property <length> font-title: 24px;
+    out property <length> font-metric: 22px;
+    out property <int> weight-normal: 500;
+    out property <int> weight-medium: 600;
+    out property <int> weight-bold: 700;
+    out property <length> control-height: 38px;
+    out property <length> radius: 8px;
+    out property <length> control-radius: 6px;
+    out property <length> gap: 12px;
+    out property <length> padding: 16px;
+
     out property <brush> canvas: #0b0f17;
     out property <brush> sidebar: #0f1520;
     out property <brush> surface: #141b27;
     out property <brush> surface-raised: #1a2332;
     out property <brush> surface-hover: #202b3c;
+    out property <brush> surface-alternate: #111924;
+    out property <brush> accent-pressed: #416fd5;
+    out property <brush> control-pressed: #111823;
     out property <brush> border: #283548;
     out property <brush> border-strong: #36465d;
 
+    out property <brush> overlay: #111923f2;
     out property <brush> text: #edf3fb;
-    out property <brush> text-muted: #94a3b8;
-    out property <brush> text-subtle: #64748b;
+    out property <brush> text-muted: #b2c0d3;
+    out property <brush> text-subtle: #92a4bc;
 
     out property <brush> accent: #5b8cff;
     out property <brush> accent-hover: #73a0ff;
@@ -18,4 +41,23 @@ export global Theme {
     out property <brush> success-soft: #153c35;
     out property <brush> warning: #f3b95f;
     out property <brush> danger: #ff6b7a;
+}
+
+// Scientific plots keep a light surface while sharing the application's typography.
+export global PlotTheme {
+    out property <brush> background: #ffffff;
+    out property <brush> surface: #f8fafc;
+    out property <brush> footer: #eef2f6;
+    out property <brush> text: #172b46;
+    out property <brush> text-muted: #44566e;
+    out property <brush> border: #53657b;
+    out property <brush> border-soft: #dbe2eb;
+    out property <brush> sensor-in-slice: #00794e;
+    out property <brush> sensor-fill: #18c988;
+    out property <brush> sensor-label: #fffffff0;
+    out property <brush> sensor-border: #94a3b8a0;
+    out property <brush> frame: #64748b60;
+    out property <brush> grid-origin: #53657b90;
+    out property <brush> grid-major: #64748b50;
+    out property <brush> grid-minor: #64748b1c;
 }

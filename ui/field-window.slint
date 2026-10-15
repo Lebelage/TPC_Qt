@@ -1,0 +1,251 @@
+import { FieldMap, MapTick, MapSensor } from "field-map.slint";
+export { MapTick, MapSensor } from "field-map.slint";
+import { Slider, Spinner } from "std-widgets.slint";
+import { Theme, PlotTheme } from "theme.slint";
+import { AppButton, DarkInput, FieldBadge, MutedLabel, PageTitle, Panel } from "components.slint";
+
+export component FieldWindow inherits Window {
+    title: "TPC Field Slices";
+    preferred-width: 900px;
+    preferred-height: 740px;
+    min-width: 760px;
+    min-height: 680px;
+    background: Theme.canvas;
+    default-font-family: Theme.font-family;
+    default-font-size: Theme.font-body;
+
+    in property <bool> available: false;
+    in property <bool> loading: false;
+    in property <image> slice-image;
+    in property <float> image-width: 1;
+    in property <float> image-height: 1;
+    in property <int> displayed-axis: 2;
+    in property <float> horizontal-minimum;
+    in property <float> horizontal-maximum;
+    in property <float> vertical-minimum;
+    in property <float> vertical-maximum;
+    in property <float> grid-step;
+    in property <[MapTick]> horizontal-ticks;
+    in property <[MapTick]> vertical-ticks;
+    in property <[MapTick]> color-ticks;
+    in property <string> field-unit: "G";
+    in property <[MapSensor]> map-sensors;
+    in-out property <bool> show-grid: true;
+    in-out property <bool> show-sensors: true;
+    in-out property <bool> show-readout: true;
+    in-out property <int> axis-index: 2;
+    in-out property <float> slice-position: 0;
+    in-out property <string> position-input: "0";
+    in property <float> minimum-position: 0;
+    in property <float> maximum-position: 0;
+    in property <string> position-label: "—";
+    in-out property <string> probe-text: "";
+
+    public function fit-view() { field-map.reset-view(); }
+    public function refresh-plot() { field-map.refresh-view(); }
+    public function zoom-in() { field-map.zoom-centred(field-map.zoom * 1.25); }
+    public function zoom-out() { field-map.zoom-centred(field-map.zoom / 1.25); }
+
+    callback axis-changed(int);
+    callback position-changed(float);
+    callback position-entered(string);
+    callback calculate-field();
+    callback viewport-changed(float, float);
+    callback map-zoom-changed(float);
+    callback map-view-changed(float, float, float, float, float, float);
+    callback inspect-field(float, float, float, float) -> string;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 10px;
+
+        HorizontalLayout {
+            height: 52px;
+            spacing: 8px;
+            PageTitle {
+                title: "Field plot";
+                subtitle: "Cartesian slices · Equal scale in millimetres";
+                horizontal-stretch: 1;
+            }
+            Rectangle {
+                width: 124px;
+                background: transparent;
+                AppButton {
+                    y: (parent.height - self.height) / 2;
+                    width: parent.width;
+                    text: "Recalculate";
+                    active: !root.loading;
+                    clicked => { root.calculate-field(); }
+                }
+            }
+            Rectangle {
+                width: 112px;
+                background: transparent;
+                FieldBadge {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    ready: root.available;
+                }
+            }
+        }
+
+        Panel {
+            height: 104px;
+            VerticalLayout {
+                padding: 10px; spacing: 8px;
+                HorizontalLayout {
+                    height: Theme.control-height; spacing: 8px;
+                    MutedLabel { text: "Plane"; width: 48px; }
+                    AppButton { width: 40px; text: "X"; primary: root.axis-index == 0; clicked => { root.axis-index = 0; root.axis-changed(0); } }
+                    AppButton { width: 40px; text: "Y"; primary: root.axis-index == 1; clicked => { root.axis-index = 1; root.axis-changed(1); } }
+                    AppButton { width: 40px; text: "Z"; primary: root.axis-index == 2; clicked => { root.axis-index = 2; root.axis-changed(2); } }
+                    Rectangle { horizontal-stretch: 1; }
+                    Text { text: root.position-label; color: Theme.text; font-family: Theme.mono-family; font-size: Theme.font-body; font-weight: Theme.weight-medium; vertical-alignment: center; }
+                }
+                HorizontalLayout {
+                    height: Theme.control-height; spacing: 8px;
+                    MutedLabel { text: "Zoom"; width: 48px; }
+                    AppButton { width: 38px; text: "−"; active: root.available && field-map.zoom > 1; clicked => { root.zoom-out(); } }
+                    Text { width: 56px; text: round(field-map.zoom * 100) + "%"; color: Theme.text; font-size: Theme.font-body; font-weight: Theme.weight-medium; horizontal-alignment: center; vertical-alignment: center; }
+                    AppButton { width: 38px; text: "+"; active: root.available && field-map.zoom < 8; clicked => { root.zoom-in(); } }
+                    AppButton { width: 64px; text: "Fit"; active: root.available; clicked => { root.fit-view(); } }
+                    Rectangle { horizontal-stretch: 1; }
+                    AppButton { width: 126px; text: "Hall sensors"; primary: root.show-sensors; clicked => { root.show-sensors = !root.show-sensors; } }
+                    AppButton { width: 92px; text: "Readout"; primary: root.show-readout; clicked => { root.show-readout = !root.show-readout; } }
+                    AppButton { width: 76px; text: "Grid"; primary: root.show-grid; clicked => { root.show-grid = !root.show-grid; } }
+                }
+            }
+        }
+
+        Panel {
+            vertical-stretch: 1;
+            clip: true;
+            Rectangle {
+                x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
+                background: PlotTheme.background;
+                border-radius: Theme.radius;
+                field-map := FieldMap {
+                    width: parent.width; height: parent.height;
+                    source: root.slice-image;
+                    available: root.available;
+                    loading: root.loading;
+                    axis: root.displayed-axis;
+                    horizontal-minimum: root.horizontal-minimum;
+                    horizontal-maximum: root.horizontal-maximum;
+                    vertical-minimum: root.vertical-minimum;
+                    vertical-maximum: root.vertical-maximum;
+                    color-ticks: root.color-ticks;
+                    field-unit: root.field-unit;
+                    grid-step: root.grid-step;
+                    image-width: root.image-width;
+                    image-height: root.image-height;
+                    horizontal-ticks: root.horizontal-ticks;
+                    vertical-ticks: root.vertical-ticks;
+                    sensors: root.map-sensors;
+                    show-grid: root.show-grid;
+                    show-sensors: root.show-sensors;
+                    viewport-changed(w, h) => { root.viewport-changed(w, h); }
+                    zoom-changed(value) => { root.map-zoom-changed(value); }
+                    view-changed(w, h, x, y, mw, mh) => { root.map-view-changed(w, h, x, y, mw, mh); }
+                    inspect-field(x, y, w, h) => { return root.inspect-field(x, y, w, h); }
+                    probe-changed(value) => { root.probe-text = value; }
+                }
+                if root.show-readout && field-map.hovering && root.available && !root.loading && root.probe-text != "": Rectangle {
+                    // A compact readout away from the selected point; no full-span crosshair.
+                    x: max(field-map.plot-x + 8px, min(field-map.plot-x + field-map.plot-width - self.width - 8px,
+                        field-map.pointer-x + 18px + self.width > parent.width - 6px
+                            ? field-map.pointer-x - self.width - 18px
+                            : field-map.pointer-x + 18px));
+                    y: max(field-map.plot-y + 8px, min(field-map.plot-y + field-map.plot-height - self.height - 8px,
+                        field-map.pointer-y + 18px + self.height > parent.height - 6px
+                            ? field-map.pointer-y - self.height - 18px
+                            : field-map.pointer-y + 18px));
+                    width: min(480px, field-map.plot-width - 16px);
+                    height: 156px;
+                    background: Theme.overlay;
+                    border-color: Theme.border-strong;
+                    border-width: 1px;
+                    border-radius: 5px;
+                    Text {
+                        x: 12px; y: 10px;
+                        width: parent.width - 24px; height: parent.height - 20px;
+                        text: root.probe-text;
+                        color: Theme.text;
+                        font-family: Theme.mono-family;
+                        font-size: Theme.font-readout;
+                        font-weight: Theme.weight-normal;
+                        vertical-alignment: center;
+                    }
+                }
+                if root.loading: Spinner {
+                    x: field-map.plot-x + (field-map.plot-width - self.width) / 2;
+                    y: field-map.plot-y + (field-map.plot-height - self.height) / 2;
+                }
+                if !root.available: VerticalLayout {
+                    x: field-map.plot-x; y: field-map.plot-y;
+                    width: field-map.plot-width; height: field-map.plot-height;
+                    alignment: center;
+                    spacing: 7px;
+                    Text { text: "No field data"; color: PlotTheme.text; font-size: Theme.font-heading; font-weight: Theme.weight-medium; horizontal-alignment: center; }
+                    Text { text: "Calculate the field to inspect slices"; color: PlotTheme.text-muted; font-size: Theme.font-caption; horizontal-alignment: center; }
+                }
+            }
+        }
+
+        Panel {
+            height: 64px;
+            VerticalLayout {
+                padding: 12px;
+                spacing: 8px;
+                HorizontalLayout {
+                    height: Theme.control-height;
+                    spacing: 8px;
+                    Text {
+                        width: 82px;
+                        text: root.minimum-position;
+                        color: Theme.text-muted;
+                        font-family: Theme.mono-family;
+                        font-size: Theme.font-caption; font-weight: Theme.weight-medium;
+                        horizontal-alignment: right;
+                        vertical-alignment: center;
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        background: transparent;
+                        Slider {
+                            y: (parent.height - self.height) / 2;
+                            width: parent.width;
+                            height: 22px;
+                            minimum: root.minimum-position;
+                            maximum: root.maximum-position;
+                            value <=> root.slice-position;
+                            enabled: root.available && root.maximum-position > root.minimum-position;
+                            changed => { root.position-changed(self.value); }
+                        }
+                    }
+                    Text {
+                        width: 112px;
+                        text: root.maximum-position + " mm";
+                        color: Theme.text-muted;
+                        font-family: Theme.mono-family;
+                        font-size: Theme.font-caption; font-weight: Theme.weight-medium;
+                        vertical-alignment: center;
+                    }
+                    DarkInput {
+                        width: 100px;
+                        text <=> root.position-input;
+                        active: root.available;
+                        placeholder: "0";
+                        accepted(value) => { root.position-entered(value); }
+                    }
+                    AppButton {
+                        width: 56px;
+                        text: "Go";
+                        active: root.available;
+                        clicked => { root.position-entered(root.position-input); }
+                    }
+                }
+            }
+        }
+    }
+}

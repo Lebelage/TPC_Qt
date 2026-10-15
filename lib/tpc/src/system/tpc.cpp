@@ -100,12 +100,14 @@ auto TPC::get_frame_request() -> std::optional<std::unordered_map<std::string, d
 
 auto TPC::get_telemetry_request() -> models::TelemetryFrame {
     auto frame = client_->get_telemetry();
+    std::scoped_lock lock{calibration_mutex_};
+    const bool input_in_gauss = input_in_gauss_.load();
     for (auto& [sensor_name, sample] : frame) {
-        if (input_in_gauss_) {
+        if (input_in_gauss) {
             sample.in_gauss = true;
             continue;
         }
-        const auto calibration = models::HallCalibrationCollection::find(sensor_name);
+        const auto calibration = models::HallCalibrationCollection::resolve(sensor_name, channel_calibrations_);
         if (calibration) {
             sample.value = millivolts_to_gauss(sample.value, *calibration);
             sample.in_gauss = true;
@@ -113,6 +115,14 @@ auto TPC::get_telemetry_request() -> models::TelemetryFrame {
         }
     }
     return frame;
+}
+
+void TPC::set_channel_calibrations(
+    std::unordered_map<std::string, models::HallCalibration> calibrations, bool input_in_gauss
+) {
+    std::scoped_lock lock{calibration_mutex_};
+    channel_calibrations_ = std::move(calibrations);
+    input_in_gauss_ = input_in_gauss;
 }
 
 std::expected<void, std::string> TPC::set_reference_field(analytics::AnalyticsManager::ReferenceField reference) {
@@ -244,9 +254,10 @@ auto TPC::get_field_slice(
     std::array<std::size_t, 2> grid,
     double radius,
     double length,
-    std::stop_token stop_token
+    std::stop_token stop_token,
+    analytics::models::SliceFraming framing
 ) const -> std::expected<analytics::models::FieldSlice, std::string> {
-    return impl_->analytics_manager_.evaluate_field_slice(direction, coordinate, grid, radius, length, stop_token);
+    return impl_->analytics_manager_.evaluate_field_slice(direction, coordinate, grid, radius, length, stop_token, framing);
 }
 
 auto TPC::export_to_vtk(std::string_view file_path) -> std::expected<void, std::string> {
@@ -268,7 +279,7 @@ auto TPC::export_to_vtk(std::string_view file_path) -> std::expected<void, std::
 #pragma region Private Initialization
 
 double TPC::millivolts_to_gauss(double voltage_mv, const models::HallCalibration& calibration) noexcept {
-    return calibration.k * (voltage_mv - calibration.v0_mv);
+    return calibration.apply(voltage_mv);
 }
 
 auto TPC::initialize_start_handlers() -> void {

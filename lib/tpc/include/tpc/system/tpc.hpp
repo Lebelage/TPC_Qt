@@ -84,8 +84,16 @@ public:
      */
     [[nodiscard]] auto get_frame_request() -> std::optional<std::unordered_map<std::string, double>>;
     [[nodiscard]] auto get_telemetry_request() -> models::TelemetryFrame;
-    void set_input_in_gauss(bool in_gauss) noexcept { input_in_gauss_ = in_gauss; }
-    std::expected<void, std::string> set_reference_field(std::function<std::expected<analytics::models::FieldComponents, std::string>(std::array<double, 3>)> reference);
+    void set_input_in_gauss(bool in_gauss) noexcept {
+        input_in_gauss_ = in_gauss;
+    }
+    /** Per-channel overrides; unspecified channels retain built-in calibration. */
+    void set_channel_calibrations(
+        std::unordered_map<std::string, models::HallCalibration> calibrations, bool input_in_gauss
+    );
+    std::expected<void, std::string> set_reference_field(
+        std::function<std::expected<analytics::models::FieldComponents, std::string>(std::array<double, 3>)> reference
+    );
 
     /**
      * @brief Creates a deterministic test frame in gauss without reading OPC UA.
@@ -110,7 +118,8 @@ public:
         std::array<std::size_t, 2> grid,
         double radius,
         double length,
-        std::stop_token stop_token = {}
+        std::stop_token stop_token = {},
+        analytics::models::SliceFraming framing = analytics::models::SliceFraming::Tight
     ) const -> std::expected<analytics::models::FieldSlice, std::string>;
 
     auto export_to_vtk(std::string_view file_path) -> std::expected<void, std::string>;
@@ -173,6 +182,8 @@ private:
     size_t polling_interval_ms_{0};
     size_t polling_interval_revision_{0};
     std::atomic_bool input_in_gauss_{false};
+    std::mutex calibration_mutex_;
+    std::unordered_map<std::string, models::HallCalibration> channel_calibrations_;
 };
 
 }  // namespace tpc::system

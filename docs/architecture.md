@@ -27,6 +27,24 @@ table model, updates changed rows in place, and uploads slice pixels only when
 the rendered slice changes. ViewModel state is protected by a mutex; observer
 notifications and service calls happen after that mutex is released.
 
+Typography, spacing and palette tokens live in `ui/theme.slint`; shared controls
+and text styles live in `ui/components.slint`. Both windows and standard widgets
+use the same Fluent dark style selected in `xmake.lua`. The scientific plot keeps
+a light data surface with the same typography. `ui/sensor-table.slint` owns the
+virtualized sensor list and its fixed header, synchronized on horizontal scroll.
+`ui/settings-page.slint` provides a vertically scrollable form, and
+`ui/diagnostics-panel.slint` keeps long quality messages readable without resizing
+the table.
+
+The field plot is split into `ui/field-window.slint` (window controls and readout)
+and `ui/field-map.slint` (plot presentation and camera interaction). Shared controls
+live in `ui/components.slint`; `ui/app.slint` exports both application windows.
+`field_map_overlay.cpp` computes physical grid ticks, colour-scale labels and Hall
+sensor projections without Slint types. The binding updates the grid on camera
+changes, and recreates sensor/colour models only when their source data changes.
+`RenderedFieldSlice` contains the immutable raster and numeric sample data;
+`FieldSliceService` manages requests and background worker lifetime.
+
 ## Composition and lifetime
 
 `application::ApplicationContext` is the composition root. It owns the event
@@ -58,7 +76,8 @@ adapter consumes `<tpc/tpc.hpp>` and translates backend events into
 application-owned event types.
 
 The API lives in `lib/tpc` and is built as the `tpc` static library.
-The application services form `tpc_app`, shared by the desktop target and tests.
+The application services and toolkit-independent ViewModels form `tpc_app`,
+shared by the desktop target and tests.
 OPC UA sources live in `third_party` and are compiled directly by xmake.
 
 ## Settings
@@ -67,8 +86,20 @@ Settings are stored with the application:
 
 - all platforms: `Settings/settings.json` next to the application executable.
 
-On first launch, `Settings/settings.json` is created with default values. If it
-is empty, malformed, or cannot be deserialized, it is replaced with defaults.
+On first launch, a missing or empty default file is initialized with defaults.
+Malformed settings are reported without overwriting the file. Users can load
+another JSON profile from Settings; explicit loads are transactional and never
+fall back to defaults. Apply writes to the active file. See
+[Configuration profiles](configuration-profiles.md) for the schema and merge rules.
+
+Server discovery merges configured and discovered identities without deleting
+file-only sensors. Availability requires all R/F/Z channels in the current
+session, while `enabled` stores the user's independent selection. Only available,
+enabled sensors with known positions enter reconstruction. Discovery state and
+monotonic publication revisions are never serialized; revisions prevent stale
+worker notifications from undoing a newer selection. Per-channel calibration
+from a profile overrides the built-in collection, with built-in fallback for
+unspecified channels.
 
 ## Build and packaging
 
